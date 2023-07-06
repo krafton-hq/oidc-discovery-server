@@ -3,12 +3,15 @@ package server
 import (
 	"context"
 	"encoding/json"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"google.golang.org/appengine/log"
 	"gopkg.in/square/go-jose.v2"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 )
 
 type JsonWebKey struct {
@@ -31,18 +34,57 @@ func (key *JsonWebKey) ID() string {
 	return key.JSONWebKey.KeyID
 }
 
+// TODO: move to another code
 type CachedJsonWebKeySet struct {
 	jose.JSONWebKeySet
 
 	issuer  string
-	expires int64
+	expires time.Time
+
+	lock sync.Mutex
+}
+
+func NewCachedJsonWebKeySet(issuer string) *CachedJsonWebKeySet {
+	return &CachedJsonWebKeySet{
+		JSONWebKeySet: jose.JSONWebKeySet{},
+		issuer:        issuer,
+		expires:       time.Now(),
+		lock:          sync.Mutex{},
+	}
+}
+
+func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.Client, force bool) error {
+	keySet.lock.Lock()
+	defer keySet.lock.Unlock()
+
+	if !keySet.expired(time.Now()) {
+		// somehow it's already updated. probably another goroutine.
+		return nil
+	}
+
+	conf, err := client.Discover(keySet.issuer, httpClient)
+	if err != nil {
+		return err
+	}
+
+	jsonWebKeySet, err := getKeySet(conf.JwksURI, httpClient)
+	if err != nil {
+		return err
+	}
+
+	keySet.JSONWebKeySet = *jsonWebKeySet
+}
+
+// keySet expires function
+func (keySet *CachedJsonWebKeySet) expired(time time.Time) bool {
+	return time.After(keySet.expires)
 }
 
 type KeyProvider struct {
 	client http.Client
 
 	trustedIssuers func() []string
-	cachedKeys     []op.Key
+	cachedKeySets  cmap.ConcurrentMap[string, *CachedJsonWebKeySet]
 }
 
 func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
@@ -51,17 +93,7 @@ func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 	}
 }
 
-func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
-	// check and update if invalidate
-
-	return nil, nil
-}
-
-func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
-	return nil, nil
-}
-
-func (provider *KeyProvider) getAllKeySets() ([]op.Key, error) {
+func (provider *KeyProvider) KeySet(ctx context.Context, force bool) ([]op.Key, error) {
 	keys := make([]op.Key, 0)
 
 	reachedIssuers := make(map[string]bool)
@@ -71,7 +103,7 @@ func (provider *KeyProvider) getAllKeySets() ([]op.Key, error) {
 			log.Warningf(nil, "Issuer %s already reached. Skipping.\n", issuer)
 		}
 
-		keySet, err := getKeySetFromIssuer(issuer, &provider.client)
+		keySet, err := provider.getKeySetFromIssuer(issuer, force)
 		if err != nil {
 			log.Warningf(nil, "Error getting key set from issuer %s: %v\n", issuer, err)
 		} else {
@@ -84,22 +116,29 @@ func (provider *KeyProvider) getAllKeySets() ([]op.Key, error) {
 	return keys, nil
 }
 
-func getKeySetFromIssuer(issuer string, httpClient *http.Client) (*CachedJsonWebKeySet, error) {
-	conf, err := client.Discover(issuer, httpClient)
-	if err != nil {
-		return nil, err
+func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
+	return nil, nil
+}
+
+func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*CachedJsonWebKeySet, error) {
+	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
+	keySet := NewCachedJsonWebKeySet(issuer)
+	if !provider.cachedKeySets.SetIfAbsent(issuer, NewCachedJsonWebKeySet(issuer)) {
+		var exists bool
+		keySet, exists = provider.cachedKeySets.Get(issuer)
+		if !exists {
+			panic("key set not exists")
+		}
 	}
 
-	keySet, err := getKeySet(conf.JwksURI, httpClient)
-	if err != nil {
-		return nil, err
+	if keySet.expired(time.Now()) {
+		err := keySet.update(ctx, &provider.client, force)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return &CachedJsonWebKeySet{
-		JSONWebKeySet: *keySet,
-		issuer:        issuer,
-		expires:       99999, // TODO: impl this
-	}, nil
+	return keySet, nil
 }
 
 func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, error) {
