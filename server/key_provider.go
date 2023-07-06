@@ -73,6 +73,8 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 	}
 
 	keySet.JSONWebKeySet = *jsonWebKeySet
+
+	return nil
 }
 
 // keySet expires function
