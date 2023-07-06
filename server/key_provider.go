@@ -118,6 +118,8 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 		}
 	}
 
+	// TODO: add GC code
+
 	return keys, nil
 }
 
