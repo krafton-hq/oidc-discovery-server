@@ -41,6 +41,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&Issuer, "issuer", "", "Issuer URL")
+	rootCmd.Flags().StringVar(&Issuer, "issuer", "https://localhost:8080", "Issuer URL")
 	rootCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port")
 }
