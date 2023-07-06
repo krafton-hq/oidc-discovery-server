@@ -18,6 +18,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
+	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

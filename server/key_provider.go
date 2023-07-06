@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
+	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -76,7 +78,7 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 		return errors.Wrapf(err, "failed to discover OIDC configuration. issuer: %s", keySet.issuer)
 	}
 
-	jsonWebKeySet, err := getKeySet(conf.JwksURI, httpClient)
+	jsonWebKeySet, ttl, err := getKeySet(conf.JwksURI, httpClient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
@@ -84,6 +86,7 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 	log.Debugf("updated keys: %v\n", jsonWebKeySet.Keys)
 
 	keySet.JSONWebKeySet = *jsonWebKeySet
+	keySet.expires = time.Now().Add(time.Duration(ttl) * time.Second)
 
 	return nil
 }
@@ -138,7 +141,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 			log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 		} else {
 			for _, key := range keySet.Keys {
-				log.Debugf("appending key: %+v\n", key)
+				log.Debugf("appending key to result. key: %+v\n", key)
 				keys = append(keys, &JsonWebKey{key})
 			}
 		}
@@ -173,30 +176,33 @@ func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer str
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		log.Debug("keyset not expired. skipping update.\n")
 	}
 
 	return keySet, nil
 }
 
-func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, error) {
+func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, int, error) {
 	log.Infof("fetching JWKS from %s\n", jwksUri)
 
 	res, err := httpClient.Get(jwksUri)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get JWKS from %s", jwksUri)
+		return nil, 0, errors.Wrapf(err, "failed to get JWKS from %s", jwksUri)
 	}
+
+	cache := res.Header.Get("Cache-Control")
+	ttl := getTTL(cache)
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read JWKS response body")
+		return nil, 0, errors.Wrapf(err, "failed to read JWKS response body")
 	}
-
-	log.Debugf("body: %s\n", body)
 
 	var data = new(map[string]interface{})
 
 	if err = json.Unmarshal(body, data); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal JWKS response body")
+		return nil, 0, errors.Wrapf(err, "failed to unmarshal JWKS response body")
 	}
 
 	jwks := jose.JSONWebKeySet{Keys: nil}
@@ -211,5 +217,18 @@ func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, er
 		}
 	}
 
-	return &jwks, nil
+	return &jwks, ttl, nil
+}
+
+func getTTL(cacheControlHeader string) int {
+	parsed, err := cacheobject.ParseResponseCacheControl(cacheControlHeader)
+	if err != nil {
+		return 0
+	}
+
+	if parsed.NoCachePresent {
+		return 0
+	}
+
+	return int(math.Max(float64(parsed.MaxAge), 0))
 }
