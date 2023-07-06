@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -48,7 +50,7 @@ func NewCachedJsonWebKeySet(issuer string) *CachedJsonWebKeySet {
 	return &CachedJsonWebKeySet{
 		JSONWebKeySet: jose.JSONWebKeySet{},
 		issuer:        issuer,
-		expires:       time.Now(),
+		expires:       time.UnixMilli(0),
 		lock:          sync.Mutex{},
 	}
 }
@@ -63,14 +65,20 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 		return nil
 	}
 
+	oidcDocumentURL, err := url.JoinPath(keySet.issuer, OIDCDocumentPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to join url")
+	}
+	log.Debugf("fetching OIDC document from %s\n", oidcDocumentURL)
+
 	conf, err := client.Discover(keySet.issuer, httpClient)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to discover OIDC configuration. issuer: %s", keySet.issuer)
 	}
 
 	jsonWebKeySet, err := getKeySet(conf.JwksURI, httpClient)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
 
 	log.Debugf("updated keys: %v\n", jsonWebKeySet.Keys)
@@ -127,10 +135,10 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 		keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
 		if err != nil {
-			log.Warnf("Error getting KeySet from issuer %s: %v\n", issuer, err)
+			log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 		} else {
 			for _, key := range keySet.Keys {
-				log.Debugf("appending key: %v\n", key)
+				log.Debugf("appending key: %+v\n", key)
 				keys = append(keys, &JsonWebKey{key})
 			}
 		}
@@ -171,22 +179,37 @@ func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer str
 }
 
 func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, error) {
+	log.Infof("fetching JWKS from %s\n", jwksUri)
+
 	res, err := httpClient.Get(jwksUri)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get JWKS from %s", jwksUri)
 	}
-
-	var keySet *jose.JSONWebKeySet
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to read JWKS response body")
 	}
 
-	err = json.Unmarshal(body, keySet)
-	if err != nil {
-		return nil, err
+	log.Debugf("body: %s\n", body)
+
+	var data = new(map[string]interface{})
+
+	if err = json.Unmarshal(body, data); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal JWKS response body")
 	}
 
-	return keySet, nil
+	jwks := jose.JSONWebKeySet{Keys: nil}
+
+	for _, key := range (*data)["keys"].([]interface{}) {
+		keyBytes, _ := json.Marshal(key)
+		webKey := new(jose.JSONWebKey)
+		if err := webKey.UnmarshalJSON(keyBytes); err == nil {
+			jwks.Keys = append(jwks.Keys, *webKey)
+		} else {
+			log.Warnf("failed to unmarshal key: %v\n", err)
+		}
+	}
+
+	return &jwks, nil
 }

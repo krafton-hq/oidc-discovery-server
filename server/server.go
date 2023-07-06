@@ -8,23 +8,23 @@ import (
 	"path"
 )
 
-const OIDCDocumentEndpoint = "/.well-known/openid-configuration"
-const KeysEndpoint = "/keys"
+const OIDCDocumentPath = "/.well-known/openid-configuration"
+const KeysPath = "/keys"
 
 func Handler(issuer string, keyProvider op.KeyProvider) *mux.Router {
 	router := mux.NewRouter()
 
 	discoveryConf := oidc.DiscoveryConfiguration{
 		Issuer:                           issuer,
-		JwksURI:                          path.Join(issuer, KeysEndpoint),
+		JwksURI:                          path.Join(issuer, KeysPath),
 		IDTokenSigningAlgValuesSupported: []string{"RS256"},
 	}
 
-	router.HandleFunc(OIDCDocumentEndpoint, func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(OIDCDocumentPath, func(w http.ResponseWriter, r *http.Request) {
 		op.Discover(w, &discoveryConf)
 	})
 
-	router.HandleFunc(KeysEndpoint, func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(KeysPath, func(w http.ResponseWriter, r *http.Request) {
 		op.Keys(w, r, keyProvider)
 	})
 

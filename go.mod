@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/gorilla/mux v1.8.0
 	github.com/orcaman/concurrent-map/v2 v2.0.1
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v1.7.0
 	github.com/zitadel/oidc/v2 v2.6.4
 	go.uber.org/zap v1.24.0
