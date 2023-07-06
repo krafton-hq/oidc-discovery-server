@@ -31,9 +31,18 @@ func (key *JsonWebKey) ID() string {
 	return key.JSONWebKey.KeyID
 }
 
+type CachedJsonWebKeySet struct {
+	jose.JSONWebKeySet
+
+	issuer  string
+	expires int64
+}
+
 type KeyProvider struct {
+	client http.Client
+
 	trustedIssuers func() []string
-	client         http.Client
+	cachedKeys     []op.Key
 }
 
 func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
@@ -43,10 +52,12 @@ func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 }
 
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
+	// check and update if invalidate
+
 	return nil, nil
 }
 
-func (provider *KeyProvider) getTrustedJWKS(issuer string) ([]op.Key, error) {
+func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
 	return nil, nil
 }
 
@@ -73,13 +84,22 @@ func (provider *KeyProvider) getAllKeySets() ([]op.Key, error) {
 	return keys, nil
 }
 
-func getKeySetFromIssuer(issuer string, httpClient *http.Client) (*jose.JSONWebKeySet, error) {
+func getKeySetFromIssuer(issuer string, httpClient *http.Client) (*CachedJsonWebKeySet, error) {
 	conf, err := client.Discover(issuer, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
-	return getKeySet(conf.JwksURI, httpClient)
+	keySet, err := getKeySet(conf.JwksURI, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CachedJsonWebKeySet{
+		JSONWebKeySet: *keySet,
+		issuer:        issuer,
+		expires:       99999, // TODO: impl this
+	}, nil
 }
 
 func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, error) {
