@@ -98,6 +98,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	reachedIssuers := make(map[string]bool)
 
+	// TODO: concurrent for-loop
 	for _, issuer := range provider.trustedIssuers() {
 		if _, ok := reachedIssuers[issuer]; ok {
 			log.Warningf(nil, "Issuer %s already reached. Skipping.\n", issuer)
