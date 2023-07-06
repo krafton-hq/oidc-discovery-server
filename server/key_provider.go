@@ -83,7 +83,7 @@ func (keySet *CachedJsonWebKeySet) expired(time time.Time) bool {
 }
 
 type KeyProvider struct {
-	client http.Client
+	client *http.Client
 
 	trustedIssuers func() []string
 	cachedKeySets  cmap.ConcurrentMap[string, *CachedJsonWebKeySet]
@@ -91,7 +91,9 @@ type KeyProvider struct {
 
 func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 	return &KeyProvider{
+		client:         http.DefaultClient,
 		trustedIssuers: trustedIssuers,
+		cachedKeySets:  cmap.New[*CachedJsonWebKeySet](),
 	}
 }
 
@@ -126,7 +128,7 @@ func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) 
 func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*CachedJsonWebKeySet, error) {
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := NewCachedJsonWebKeySet(issuer)
-	if !provider.cachedKeySets.SetIfAbsent(issuer, NewCachedJsonWebKeySet(issuer)) {
+	if !provider.cachedKeySets.SetIfAbsent(issuer, keySet) {
 		var exists bool
 		keySet, exists = provider.cachedKeySets.Get(issuer)
 		if !exists {
@@ -135,7 +137,7 @@ func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer str
 	}
 
 	if keySet.expired(time.Now()) {
-		err := keySet.update(ctx, &provider.client, force)
+		err := keySet.update(ctx, provider.client, force)
 		if err != nil {
 			return nil, err
 		}
