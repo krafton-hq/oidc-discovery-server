@@ -24,7 +24,6 @@ var rootCmd = &cobra.Command{
 
 		keyProvider := server.NewKeyProvider(func() []string {
 			return []string{
-				Issuer,
 				// SAMPLE CODE
 				"https://oidc.eks.ap-northeast-2.amazonaws.com/id/F43581740E73025C81BA300EBBEF2E4F",
 			}

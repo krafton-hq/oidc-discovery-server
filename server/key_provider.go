@@ -127,7 +127,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 		keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
 		if err != nil {
-			log.Warnf("Error getting key set from issuer %s: %v\n", issuer, err)
+			log.Warnf("Error getting KeySet from issuer %s: %v\n", issuer, err)
 		} else {
 			for _, key := range keySet.Keys {
 				log.Debugf("appending key: %v\n", key)
