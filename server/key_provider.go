@@ -93,7 +93,7 @@ func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 	}
 }
 
-func (provider *KeyProvider) KeySet(ctx context.Context, force bool) ([]op.Key, error) {
+func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	keys := make([]op.Key, 0)
 
 	reachedIssuers := make(map[string]bool)
@@ -103,7 +103,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context, force bool) ([]op.Key, 
 			log.Warningf(nil, "Issuer %s already reached. Skipping.\n", issuer)
 		}
 
-		keySet, err := provider.getKeySetFromIssuer(issuer, force)
+		keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
 		if err != nil {
 			log.Warningf(nil, "Error getting key set from issuer %s: %v\n", issuer, err)
 		} else {
