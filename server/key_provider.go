@@ -6,7 +6,7 @@ import (
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"google.golang.org/appengine/log"
+	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
 	"net/http"
@@ -59,6 +59,7 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 
 	if !keySet.expired(time.Now()) {
 		// somehow it's already updated. probably another goroutine.
+		log.Debugf("key set is not expired. skipping update.\n")
 		return nil
 	}
 
@@ -72,6 +73,8 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 		return err
 	}
 
+	log.Debugf("updated keys: %v\n", jsonWebKeySet.Keys)
+
 	keySet.JSONWebKeySet = *jsonWebKeySet
 
 	return nil
@@ -80,6 +83,18 @@ func (keySet *CachedJsonWebKeySet) update(ctx context.Context, httpClient *http.
 // keySet expires function
 func (keySet *CachedJsonWebKeySet) expired(time time.Time) bool {
 	return time.After(keySet.expires)
+}
+
+// TODO: module-level structured logging
+var log *zap.SugaredLogger
+
+func init() {
+	log2, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+
+	log = log2.Sugar()
 }
 
 type KeyProvider struct {
@@ -104,15 +119,18 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	// TODO: concurrent for-loop
 	for _, issuer := range provider.trustedIssuers() {
+		log.Infof("lookup issuer: %s\n", issuer)
+
 		if _, ok := reachedIssuers[issuer]; ok {
-			log.Warningf(nil, "Issuer %s already reached. Skipping.\n", issuer)
+			log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
 		}
 
 		keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
 		if err != nil {
-			log.Warningf(nil, "Error getting key set from issuer %s: %v\n", issuer, err)
+			log.Warnf("Error getting key set from issuer %s: %v\n", issuer, err)
 		} else {
 			for _, key := range keySet.Keys {
+				log.Debugf("appending key: %v\n", key)
 				keys = append(keys, &JsonWebKey{key})
 			}
 		}
@@ -136,9 +154,13 @@ func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer str
 		if !exists {
 			panic("key set not exists")
 		}
+	} else {
+		log.Debugf("key set not exists. created new one: %v\n", keySet)
 	}
 
 	if keySet.expired(time.Now()) {
+		log.Infof("keyset expired. issuer: %v\n", keySet.issuer)
+
 		err := keySet.update(ctx, provider.client, force)
 		if err != nil {
 			return nil, err
