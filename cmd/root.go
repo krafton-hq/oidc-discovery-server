@@ -22,7 +22,9 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("issuer is not a valid URL. %v", err)
 		}
 
-		keyProvider := server.NewKeyProvider()
+		keyProvider := server.NewKeyProvider(func() []string {
+			return []string{Issuer}
+		})
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 
