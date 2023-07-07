@@ -21,6 +21,6 @@ func Perf(label string) func() {
 	log.Debugf("[%s] starting label: %s", caller, label)
 	start := time.Now()
 	return func() {
-		log.Debugf("[%s] %s took %s", label, time.Since(start).String(), caller)
+		log.Debugf("[%s] %s took %s", caller, time.Since(start).String(), label)
 	}
 }
