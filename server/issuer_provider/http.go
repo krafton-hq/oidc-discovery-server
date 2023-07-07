@@ -53,8 +53,10 @@ func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
 }
 
 func (provider *HTTPIssuerProvider) queryEndpoint() (string, error) {
+	defer util.Perf("queryEndpoint")()
 	endpoint := provider.Endpoint()
 
+	defer util.Perf("queryEndpoint.http.Get")()
 	res, err := http.Get(endpoint)
 	if err != nil {
 		return "", errors.Wrapf(err, "error while fetching issuers from endpoint: %s", endpoint)
