@@ -23,7 +23,7 @@ type KeyProvider struct {
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) op.KeyProvider {
+func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) *KeyProvider {
 	return &KeyProvider{
 		client:         http.DefaultClient,
 		issuerProvider: issuerProvider,
