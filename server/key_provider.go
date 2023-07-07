@@ -71,8 +71,8 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	keys := make([]op.Key, 0)
 
-	for _, value := range values.([][]*jwt.JsonWebKey) {
-		for _, key := range value {
+	for _, value := range values.([]any) {
+		for _, key := range value.([]*jwt.JsonWebKey) {
 			keys = append(keys, key)
 		}
 	}
