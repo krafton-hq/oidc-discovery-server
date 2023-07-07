@@ -14,16 +14,7 @@ import (
 )
 
 // TODO: module-level structured logging
-var log *zap.SugaredLogger
-
-func init() {
-	log2, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
-	log = log2.Sugar()
-}
+var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type KeyProvider struct {
 	client *http.Client

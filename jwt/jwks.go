@@ -17,7 +17,7 @@ import (
 )
 
 // TODO: module-level structured logging
-var log *zap.SugaredLogger
+var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type CachedJsonWebKeySet struct {
 	jose.JSONWebKeySet

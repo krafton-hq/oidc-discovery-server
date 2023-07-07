@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: module-level structured logging
-var log *zap.SugaredLogger
+var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 var Issuer string
 var Port int
