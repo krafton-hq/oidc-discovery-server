@@ -38,12 +38,11 @@ func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
 		return nil, errors.Wrap(err, "error while querying getting issuers")
 	}
 
-	gsonQuery := provider.GsonQuery()
-	log.Debugf("body: %s, query: %s\n", body, gsonQuery)
-	res := gjson.Get(body, gsonQuery).Array()
+	gjsonQuery := provider.GJsonQuery()
+	log.Debugf("body: %s, gjsonQuery: %s\n", body, gjsonQuery)
+	res := gjson.Get(body, gjsonQuery).Array()
 
 	issuers := make([]string, 0)
-
 	for _, value := range res {
 		issuers = append(issuers, value.String())
 	}
@@ -72,6 +71,6 @@ func (provider *HTTPIssuerProvider) Endpoint() string {
 	return provider.config.GetString("endpoint")
 }
 
-func (provider *HTTPIssuerProvider) GsonQuery() string {
-	return provider.config.GetString("gsonQuery")
+func (provider *HTTPIssuerProvider) GJsonQuery() string {
+	return provider.config.GetString("gjsonQuery")
 }
