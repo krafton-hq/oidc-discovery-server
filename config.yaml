@@ -1,0 +1,6 @@
+issuerProvider:
+  static:
+    issuers: []
+#  http:
+#    endpoint: ""
+#    gjsonQuery: ""
