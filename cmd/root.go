@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		issuerProvider := issuer_provider.NewChainIssuerProvider(
-			issuer_provider.NewFileIssuerProvider(viper.GetViper()),
+			issuer_provider.NewFileIssuerProvider(viper.Sub("issuerProvider.static")),
 		)
 
 		keyProvider := server.NewKeyProvider(issuerProvider)
@@ -59,6 +59,7 @@ func init() {
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
 	viper.WatchConfig()
 
 	if err := viper.ReadInConfig(); err != nil {
