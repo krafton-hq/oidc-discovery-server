@@ -5,7 +5,7 @@ import (
 	"github.com/fanliao/go-promise"
 	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
 	"github.com/krafton-hq/oidc-discovery-server/jwt"
-	"github.com/krafton-hq/oidc-discovery-server/util"
+	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/op"
@@ -40,7 +40,7 @@ func (provider *KeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySe
 }
 
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
-	defer util.Perf("KeySet")()
+	defer perf.Perf("KeySet")()
 
 	reachedIssuers := cmap.New[struct{}]()
 	promises := make([]interface{}, 0)

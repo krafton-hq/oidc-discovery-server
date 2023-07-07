@@ -1,4 +1,4 @@
-package util
+package perf
 
 import (
 	"go.uber.org/zap"

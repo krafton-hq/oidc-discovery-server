@@ -3,7 +3,7 @@ package jwt
 import (
 	"context"
 	"encoding/json"
-	"github.com/krafton-hq/oidc-discovery-server/util"
+	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
@@ -60,7 +60,7 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 	keySet.lock.Lock()
 	defer keySet.lock.Unlock()
 
-	defer util.Perf("Update")()
+	defer perf.Perf("Update")()
 
 	if !force {
 		if !keySet.Expired(time.Now()) {

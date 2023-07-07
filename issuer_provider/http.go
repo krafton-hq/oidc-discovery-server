@@ -1,7 +1,7 @@
 package issuer_provider
 
 import (
-	"github.com/krafton-hq/oidc-discovery-server/util"
+	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
@@ -34,7 +34,7 @@ func (provider *HTTPIssuerProvider) Issuers() []string {
 }
 
 func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
-	defer util.Perf("queryIssuers")()
+	defer perf.Perf("queryIssuers")()
 	body, err := provider.queryEndpoint()
 	if err != nil {
 		return nil, errors.Wrap(err, "error while querying getting issuers")
@@ -53,10 +53,10 @@ func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
 }
 
 func (provider *HTTPIssuerProvider) queryEndpoint() (string, error) {
-	defer util.Perf("queryEndpoint")()
+	defer perf.Perf("queryEndpoint")()
 	endpoint := provider.Endpoint()
 
-	defer util.Perf("queryEndpoint.http.Get")()
+	defer perf.Perf("queryEndpoint.http.Get")()
 	res, err := http.Get(endpoint)
 	if err != nil {
 		return "", errors.Wrapf(err, "error while fetching issuers from endpoint: %s", endpoint)
