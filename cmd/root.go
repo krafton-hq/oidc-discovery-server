@@ -31,11 +31,11 @@ var rootCmd = &cobra.Command{
 
 		issuerProviders := make([]issuer_provider.IssuerProvider, 0)
 		if sub := viper.Sub("issuerProvider.http"); sub != nil {
-			log.Debugf("adding http issuer provider: %+v\n", sub)
+			log.Debugln("adding http issuer provider")
 			issuerProviders = append(issuerProviders, issuer_provider.NewHTTPIssuerProvider(sub))
 		}
 		if sub := viper.Sub("issuerProvider.static"); sub != nil {
-			log.Debugf("adding static issuer provider: %+v\n", sub)
+			log.Debugln("adding static issuer provider")
 			issuerProviders = append(issuerProviders, issuer_provider.NewFileIssuerProvider(sub))
 		}
 
