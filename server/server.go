@@ -4,11 +4,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.krafton.com/sbx/oidc-discovery-server/jwt"
 	"net/http"
 	"path"
 )
 
-const OIDCDocumentPath = "/.well-known/openid-configuration"
 const KeysPath = "/keys"
 
 func Handler(issuer string, keyProvider op.KeyProvider) *mux.Router {
@@ -20,7 +20,7 @@ func Handler(issuer string, keyProvider op.KeyProvider) *mux.Router {
 		IDTokenSigningAlgValuesSupported: []string{"RS256"},
 	}
 
-	router.HandleFunc(OIDCDocumentPath, func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(jwt.OIDCDocumentPath, func(w http.ResponseWriter, r *http.Request) {
 		op.Discover(w, &discoveryConf)
 	})
 

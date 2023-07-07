@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
-	"github.krafton.com/sbx/oidc-discovery-server/server"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
@@ -56,7 +55,7 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 		log.Debugf("force updating KeySet. issuer: %s.\n", keySet.issuer)
 	}
 
-	oidcDocumentURL, err := url.JoinPath(keySet.issuer, server.OIDCDocumentPath)
+	oidcDocumentURL, err := url.JoinPath(keySet.issuer, OIDCDocumentPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to join url")
 	}
