@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
+	"github.com/zitadel/oidc/v2/pkg/op"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
@@ -20,7 +21,7 @@ import (
 var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type CachedJsonWebKeySet struct {
-	jose.JSONWebKeySet
+	jwks jose.JSONWebKeySet
 
 	issuer  string
 	expires time.Time
@@ -30,15 +31,28 @@ type CachedJsonWebKeySet struct {
 
 func NewCachedJsonWebKeySet(issuer string) *CachedJsonWebKeySet {
 	return &CachedJsonWebKeySet{
-		JSONWebKeySet: jose.JSONWebKeySet{},
-		issuer:        issuer,
-		expires:       time.UnixMilli(0),
-		lock:          sync.Mutex{},
+		jwks:    jose.JSONWebKeySet{},
+		issuer:  issuer,
+		expires: time.UnixMilli(0),
+		lock:    sync.Mutex{},
 	}
 }
 
 func (keySet *CachedJsonWebKeySet) Issuer() string {
 	return keySet.issuer
+}
+
+func (keySet *CachedJsonWebKeySet) Keys() []op.Key {
+	if keySet.Expired(time.Now()) {
+		return nil
+	} else {
+		keys := make([]op.Key, 0)
+		for _, key := range keySet.jwks.Keys {
+			keys = append(keys, &JsonWebKey{key})
+		}
+
+		return keys
+	}
 }
 
 func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.Client, force bool) error {
@@ -66,14 +80,14 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 		return errors.Wrapf(err, "failed to discover OIDC configuration. issuer: %s", keySet.issuer)
 	}
 
-	jsonWebKeySet, ttl, err := GetKeySet(conf.JwksURI, httpClient)
+	jsonWebKeySet, ttl, err := getKeySet(conf.JwksURI, httpClient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
 
 	log.Debugf("updated keys: %v\n", jsonWebKeySet.Keys)
 
-	keySet.JSONWebKeySet = *jsonWebKeySet
+	keySet.jwks = *jsonWebKeySet
 	keySet.expires = time.Now().Add(time.Duration(ttl) * time.Second)
 
 	return nil
@@ -84,7 +98,7 @@ func (keySet *CachedJsonWebKeySet) Expired(time time.Time) bool {
 	return time.After(keySet.expires)
 }
 
-func GetKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, int, error) {
+func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, int, error) {
 	log.Infof("fetching JWKS from %s\n", jwksUri)
 
 	res, err := httpClient.Get(jwksUri)

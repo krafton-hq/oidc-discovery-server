@@ -57,9 +57,9 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 				if err != nil {
 					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
-					for _, key := range keySet.Keys {
+					for _, key := range keySet.Keys() {
 						log.Debugf("appending key to result. key: %+v\n", key)
-						keys = append(keys, &jwt.JsonWebKey{JSONWebKey: key})
+						keys = append(keys, key)
 					}
 				}
 			} else {
