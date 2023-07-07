@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"github.krafton.com/sbx/oidc-discovery-server/jwt"
+	"github.krafton.com/sbx/oidc-discovery-server/server/issuer_provider"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
@@ -27,14 +28,14 @@ func init() {
 type KeyProvider struct {
 	client *http.Client
 
-	trustedIssuers func() []string
+	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
+func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) op.KeyProvider {
 	return &KeyProvider{
 		client:         http.DefaultClient,
-		trustedIssuers: trustedIssuers,
+		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
 }
@@ -44,7 +45,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	reachedIssuers := cmap.New[struct{}]()
 	promises := make([]interface{}, 0)
 
-	for _, issuer := range provider.trustedIssuers() {
+	for _, issuer := range provider.issuerProvider.Issuers() {
 		p := promise.NewPromise()
 		issuer := issuer
 		go func() {
