@@ -8,6 +8,7 @@ import (
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"github.krafton.com/sbx/oidc-discovery-server/jwt"
 	"github.krafton.com/sbx/oidc-discovery-server/server/issuer_provider"
+	"github.krafton.com/sbx/oidc-discovery-server/util"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
@@ -39,6 +40,7 @@ func (provider *KeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySe
 }
 
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
+	defer util.Perf("KeySet")()
 
 	reachedIssuers := cmap.New[struct{}]()
 	promises := make([]interface{}, 0)

@@ -7,6 +7,7 @@ import (
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.krafton.com/sbx/oidc-discovery-server/util"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"
@@ -58,6 +59,8 @@ func (keySet *CachedJsonWebKeySet) Keys() []op.Key {
 func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.Client, force bool) error {
 	keySet.lock.Lock()
 	defer keySet.lock.Unlock()
+
+	defer util.Perf("Update")()
 
 	if !force {
 		if !keySet.Expired(time.Now()) {

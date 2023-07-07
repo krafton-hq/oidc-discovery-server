@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
+	"github.krafton.com/sbx/oidc-discovery-server/util"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -33,6 +34,7 @@ func (provider *HTTPIssuerProvider) Issuers() []string {
 }
 
 func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
+	defer util.Perf("queryIssuers")()
 	body, err := provider.queryEndpoint()
 	if err != nil {
 		return nil, errors.Wrap(err, "error while querying getting issuers")
