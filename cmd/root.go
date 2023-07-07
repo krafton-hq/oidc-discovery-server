@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/viper"
 	"github.krafton.com/sbx/oidc-discovery-server/server"
+	"github.krafton.com/sbx/oidc-discovery-server/server/issuer_provider"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
@@ -26,12 +27,11 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("issuer is not a valid URL. %v", err)
 		}
 
-		keyProvider := server.NewKeyProvider(func() []string {
-			return []string{
-				// SAMPLE CODE
-				"https://oidc.eks.ap-northeast-2.amazonaws.com/id/F43581740E73025C81BA300EBBEF2E4F",
-			}
-		})
+		issuerProvider := issuer_provider.NewChainIssuerProvider(
+			issuer_provider.NewFileIssuerProvider(viper.GetViper()),
+		)
+
+		keyProvider := server.NewKeyProvider(issuerProvider)
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 
