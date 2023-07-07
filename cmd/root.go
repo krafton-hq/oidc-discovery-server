@@ -2,14 +2,18 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"github.krafton.com/sbx/oidc-discovery-server/server"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+// TODO: module-level structured logging
+var log *zap.SugaredLogger
 
 var Issuer string
 var Port int
@@ -48,4 +52,16 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringVar(&Issuer, "issuer", "https://localhost:8080/", "Issuer URL (NOTE: / suffix required if no PATH)")
 	rootCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port")
+	rootCmd.Flags().StringSlice("issuers", []string{}, "Trusted issuers")
+	if err := viper.BindPFlag("issuers", rootCmd.Flags().Lookup("issuers")); err != nil {
+		panic(err)
+	}
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.WatchConfig()
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Warnf("failed to read config file. %v", err)
+	}
 }
