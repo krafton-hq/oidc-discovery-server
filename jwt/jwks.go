@@ -3,11 +3,11 @@ package jwt
 import (
 	"context"
 	"encoding/json"
+	"github.com/krafton-hq/oidc-discovery-server/util"
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.krafton.com/sbx/oidc-discovery-server/util"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 	"io"

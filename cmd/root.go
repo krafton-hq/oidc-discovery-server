@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
+	"github.com/krafton-hq/oidc-discovery-server/server"
 	"github.com/spf13/viper"
-	"github.krafton.com/sbx/oidc-discovery-server/issuer_provider"
-	"github.krafton.com/sbx/oidc-discovery-server/server"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
