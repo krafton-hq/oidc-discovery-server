@@ -22,6 +22,8 @@ var Port int
 var rootCmd = &cobra.Command{
 	Use: "oidc-discovery-server",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.Info("initializing server...")
+
 		issuerParsed, err := url.Parse(Issuer)
 		if err != nil {
 			log.Fatalf("issuer is not a valid URL. %v", err)
@@ -29,9 +31,11 @@ var rootCmd = &cobra.Command{
 
 		issuerProviders := make([]issuer_provider.IssuerProvider, 0)
 		if sub := viper.Sub("issuerProvider.http"); sub != nil {
+			log.Debugf("adding http issuer provider: %+v\n", sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewHTTPIssuerProvider(sub))
 		}
 		if sub := viper.Sub("issuerProvider.static"); sub != nil {
+			log.Debugf("adding static issuer provider: %+v\n", sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewFileIssuerProvider(sub))
 		}
 
@@ -40,6 +44,7 @@ var rootCmd = &cobra.Command{
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 
+		log.Infof("starting server on port %d\n", Port)
 		err = http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
 		if err != nil {
 			log.Fatalf("failed to start server. %v", err)
