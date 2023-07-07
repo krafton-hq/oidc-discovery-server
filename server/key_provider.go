@@ -38,7 +38,9 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	for _, issuer := range provider.issuerProvider.Issuers() {
 		p := promise.NewPromise()
+		promises = append(promises, p)
 		issuer := issuer
+
 		go func() {
 			keys := make([]op.Key, 0)
 			log.Infof("lookup issuer: %s\n", issuer)
