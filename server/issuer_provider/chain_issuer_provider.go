@@ -10,11 +10,11 @@ func NewChainIssuerProvider(providers ...IssuerProvider) *ChainIssuerProvider {
 	}
 }
 
-func (provider *ChainIssuerProvider) GetIssuer() []string {
+func (provider *ChainIssuerProvider) Issuers() []string {
 	issuers := make([]string, 0)
 
 	for _, p := range provider.providers {
-		issuers = append(issuers, p.GetIssuer()...)
+		issuers = append(issuers, p.Issuers()...)
 	}
 
 	return issuers

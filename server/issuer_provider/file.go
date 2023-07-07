@@ -12,6 +12,6 @@ func NewFileIssuerProvider(config *viper.Viper) *FileIssuerProvider {
 	}
 }
 
-func (provider *FileIssuerProvider) GetIssuer() []string {
+func (provider *FileIssuerProvider) Issuers() []string {
 	return provider.config.GetStringSlice("issuers")
 }
