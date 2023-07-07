@@ -31,6 +31,13 @@ func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) op.KeyProvide
 	}
 }
 
+func (provider *KeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySet, bool) {
+	keySet, exists := provider.cachedKeySets.Get(issuer)
+
+	// copy to avoid modifying keySet in outside
+	return &*keySet, exists
+}
+
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	reachedIssuers := cmap.New[struct{}]()
