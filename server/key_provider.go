@@ -126,7 +126,7 @@ func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
-	reachedIssuers := make(map[string]bool)
+	reachedIssuers := cmap.New[struct{}]()
 	promises := make([]interface{}, 0)
 
 	for _, issuer := range provider.trustedIssuers() {
@@ -136,19 +136,20 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 			keys := make([]op.Key, 0)
 			log.Infof("lookup issuer: %s\n", issuer)
 
-			if _, ok := reachedIssuers[issuer]; ok {
+			if reachedIssuers.SetIfAbsent(issuer, struct{}{}) {
+				keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
+				if err != nil {
+					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
+				} else {
+					for _, key := range keySet.Keys {
+						log.Debugf("appending key to result. key: %+v\n", key)
+						keys = append(keys, &JsonWebKey{key})
+					}
+				}
+			} else {
 				log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
 			}
 
-			keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
-			if err != nil {
-				log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
-			} else {
-				for _, key := range keySet.Keys {
-					log.Debugf("appending key to result. key: %+v\n", key)
-					keys = append(keys, &JsonWebKey{key})
-				}
-			}
 			if err := p.Resolve(keys); err != nil {
 				log.Error(err)
 			}
