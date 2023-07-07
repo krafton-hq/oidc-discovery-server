@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"github.com/fanliao/go-promise"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
@@ -124,30 +125,49 @@ func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
 }
 
 func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
-	keys := make([]op.Key, 0)
 
 	reachedIssuers := make(map[string]bool)
+	promises := make([]interface{}, 0)
 
-	// TODO: concurrent for-loop
 	for _, issuer := range provider.trustedIssuers() {
-		log.Infof("lookup issuer: %s\n", issuer)
+		p := promise.NewPromise()
+		issuer := issuer
+		go func() {
+			keys := make([]op.Key, 0)
+			log.Infof("lookup issuer: %s\n", issuer)
 
-		if _, ok := reachedIssuers[issuer]; ok {
-			log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
-		}
-
-		keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
-		if err != nil {
-			log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
-		} else {
-			for _, key := range keySet.Keys {
-				log.Debugf("appending key to result. key: %+v\n", key)
-				keys = append(keys, &JsonWebKey{key})
+			if _, ok := reachedIssuers[issuer]; ok {
+				log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
 			}
-		}
+
+			keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
+			if err != nil {
+				log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
+			} else {
+				for _, key := range keySet.Keys {
+					log.Debugf("appending key to result. key: %+v\n", key)
+					keys = append(keys, &JsonWebKey{key})
+				}
+			}
+			if err := p.Resolve(keys); err != nil {
+				log.Error(err)
+			}
+		}()
 	}
 
-	// TODO: add GC code
+	res := promise.WhenAll(promises...)
+	values, err := res.Get()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error while fetching multiple keys from issuers")
+	}
+
+	keys := make([]op.Key, 0)
+
+	for _, value := range values.([][]*JsonWebKey) {
+		for _, key := range value {
+			keys = append(keys, key)
+		}
+	}
 
 	return keys, nil
 }
