@@ -27,10 +27,15 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("issuer is not a valid URL. %v", err)
 		}
 
-		issuerProvider := issuer_provider.NewChainIssuerProvider(
-			issuer_provider.NewFileIssuerProvider(viper.Sub("issuerProvider.static")),
-		)
+		issuerProviders := make([]issuer_provider.IssuerProvider, 0)
+		if sub := viper.Sub("issuerProvider.http"); sub != nil {
+			issuerProviders = append(issuerProviders, issuer_provider.NewHTTPIssuerProvider(sub))
+		}
+		if sub := viper.Sub("issuerProvider.static"); sub != nil {
+			issuerProviders = append(issuerProviders, issuer_provider.NewFileIssuerProvider(sub))
+		}
 
+		issuerProvider := issuer_provider.NewChainIssuerProvider(issuerProviders...)
 		keyProvider := server.NewKeyProvider(issuerProvider)
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
