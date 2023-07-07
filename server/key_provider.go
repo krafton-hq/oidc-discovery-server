@@ -71,15 +71,20 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 		return nil, errors.Wrapf(err, "error while fetching multiple keys from issuers")
 	}
 
-	keys := make([]op.Key, 0)
+	result := make([]op.Key, 0)
 
-	for _, value := range values.([]any) {
-		for _, key := range value.([]*jwt.JsonWebKey) {
-			keys = append(keys, key)
+	for _, value := range values.([]interface{}) {
+		keys, err := value.(*promise.Promise).Get()
+		if err != nil {
+			log.Error(err)
+		} else {
+			for _, key := range keys.([]op.Key) {
+				result = append(result, key)
+			}
 		}
 	}
 
-	return keys, nil
+	return result, nil
 }
 
 func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
