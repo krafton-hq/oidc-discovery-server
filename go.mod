@@ -3,9 +3,11 @@ module github.krafton.com/sbx/oidc-discovery-server
 go 1.20
 
 require (
+	github.com/fanliao/go-promise v0.0.0-20141029170127-1890db352a72
 	github.com/gorilla/mux v1.8.0
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/pkg/errors v0.8.1
+	github.com/pquerna/cachecontrol v0.2.0
 	github.com/spf13/cobra v1.7.0
 	github.com/zitadel/oidc/v2 v2.6.4
 	go.uber.org/zap v1.24.0
@@ -18,8 +20,8 @@ require (
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
-	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
+	github.com/smartystreets/goconvey v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
