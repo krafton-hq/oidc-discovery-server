@@ -78,3 +78,7 @@ func (provider *HTTPIssuerProvider) Endpoint() string {
 func (provider *HTTPIssuerProvider) GJsonQuery() string {
 	return provider.config.GetString("gjsonQuery")
 }
+
+func (provider *HTTPIssuerProvider) MaxTTLSeconds() int {
+	return provider.config.GetInt("maxTTLSeconds")
+}

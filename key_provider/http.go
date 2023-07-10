@@ -5,6 +5,7 @@ import (
 	"github.com/fanliao/go-promise"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"github.krafton.com/sbx/oidc-discovery-server/issuer_provider"
 	"github.krafton.com/sbx/oidc-discovery-server/jwt"
@@ -18,15 +19,22 @@ import (
 var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type HTTPKeyProvider struct {
-	client *http.Client
-
+	client         *http.Client
+	config         *viper.Viper
 	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider) *HTTPKeyProvider {
+func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider, config *viper.Viper) *HTTPKeyProvider {
+	if config == nil {
+		config = viper.New()
+		// TODO: remove magic strings
+		config.Set("maxTTLSeconds", 300)
+	}
+
 	return &HTTPKeyProvider{
 		client:         http.DefaultClient,
+		config:         config,
 		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
@@ -129,4 +137,8 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 	}
 
 	return keySet, nil
+}
+
+func (provider *HTTPKeyProvider) MaxTTLSeconds() int {
+	return provider.config.GetInt("maxTTLSeconds")
 }

@@ -49,7 +49,7 @@ var rootCmd = &cobra.Command{
 
 		keyProviders := make([]op.KeyProvider, 0)
 
-		httpKeyProvider := key_provider.NewHTTPKeyProvider(issuerProvider)
+		httpKeyProvider := key_provider.NewHTTPKeyProvider(issuerProvider, viper.Sub("keyProvider.http"))
 		keyProviders = append(keyProviders, httpKeyProvider)
 		if sub := viper.Sub("keyProvider.k8s"); sub != nil {
 			log.Debugln("adding k8s key provider")

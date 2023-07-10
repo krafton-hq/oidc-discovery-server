@@ -1,3 +1,5 @@
+maxTTLSeconds: 300
+
 issuerProvider:
   static:
     issuers: []
