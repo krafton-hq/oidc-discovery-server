@@ -1,4 +1,4 @@
-module github.com/krafton-hq/oidc-discovery-server
+module github.krafton.com/sbx/oidc-discovery-server
 
 go 1.20
 
