@@ -17,13 +17,23 @@ func NewChainKeyProvider(providers ...op.KeyProvider) *ChainKeyProvider {
 
 func (c ChainKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	var keys []op.Key
+	checked := make(map[string]struct{})
 
 	for _, provider := range c.providers {
 		keySet, err := provider.KeySet(ctx)
 		if err != nil {
 			log.Warnf("error while getting keyset from provider: %s", err)
-		} else {
-			keys = append(keys, keySet...)
+			continue
+		}
+
+		for _, key := range keySet {
+			if _, ok := checked[key.ID()]; ok {
+				log.Warnf("kid %s already exists. skipping.\n", key.ID())
+				continue
+			}
+
+			checked[key.ID()] = struct{}{}
+			keys = append(keys, key)
 		}
 	}
 

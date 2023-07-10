@@ -81,15 +81,23 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	}
 
 	result := make([]op.Key, 0)
+	checked := make(map[string]struct{})
 
 	for _, value := range values.([]interface{}) {
 		keys, err := value.(*promise.Promise).Get()
 		if err != nil {
 			log.Error(err)
-		} else {
-			for _, key := range keys.([]op.Key) {
-				result = append(result, key)
+			continue
+		}
+
+		for _, key := range keys.([]op.Key) {
+			if _, ok := checked[key.ID()]; ok {
+				log.Warnf("kid %s already exists. skipping.\n", key.ID())
+				continue
 			}
+
+			checked[key.ID()] = struct{}{}
+			result = append(result, key)
 		}
 	}
 
