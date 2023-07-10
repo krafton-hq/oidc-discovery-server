@@ -15,10 +15,13 @@ import (
 
 const KeysPath = "/keys"
 
-// TODO: log error on error handling
-func OIDCHandler(issuer string, keyProvider op.KeyProvider) *mux.Router {
-	router := mux.NewRouter()
+func RegisterHandler(router *mux.Router, issuer string, keyProvider op.KeyProvider, httpKeyProvider *key_provider.HTTPKeyProvider) {
+	OIDCHandler(router, issuer, keyProvider)
+	OIDCHTTPHandler(router, httpKeyProvider)
+}
 
+// TODO: log error on error handling
+func OIDCHandler(router *mux.Router, issuer string, keyProvider op.KeyProvider) {
 	discoveryConf := oidc.DiscoveryConfiguration{
 		Issuer:                           issuer,
 		JwksURI:                          path.Join(issuer, KeysPath),
@@ -32,13 +35,9 @@ func OIDCHandler(issuer string, keyProvider op.KeyProvider) *mux.Router {
 	router.HandleFunc(KeysPath, func(w http.ResponseWriter, r *http.Request) {
 		op.Keys(w, r, keyProvider)
 	})
-
-	return router
 }
 
-func OIDCHTTPHandler(keyProvider *key_provider.HTTPKeyProvider) http.Handler {
-	router := mux.NewRouter()
-
+func OIDCHTTPHandler(router *mux.Router, keyProvider *key_provider.HTTPKeyProvider) {
 	keysIssuerPath, _ := url.JoinPath(KeysPath, "{issuer}")
 	router.HandleFunc(keysIssuerPath, func(w http.ResponseWriter, r *http.Request) {
 		issuer := r.URL.Query().Get("issuer")
@@ -60,6 +59,4 @@ func OIDCHTTPHandler(keyProvider *key_provider.HTTPKeyProvider) http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
-
-	return router
 }

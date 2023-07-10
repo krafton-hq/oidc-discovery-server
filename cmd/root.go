@@ -64,8 +64,10 @@ var rootCmd = &cobra.Command{
 
 		keyProvider := key_provider.NewChainKeyProvider(keyProviders...)
 
-		http.Handle(issuerParsed.Path, server.OIDCHandler(Issuer, keyProvider))
-		http.Handle(issuerParsed.Path, server.OIDCHTTPHandler(Issuer, httpKeyProvider))
+		router := mux.NewRouter()
+		server.RegisterHandler(router, Issuer, keyProvider, httpKeyProvider)
+
+		http.Handle(issuerParsed.Path, router)
 
 		log.Infof("starting server on port %d\n", Port)
 		err = http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
