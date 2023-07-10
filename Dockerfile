@@ -15,6 +15,7 @@ RUN apt update && \
     apt install -y ca-certificates && \
     apt clean
 
-COPY --from=BUILDER /oidc-discovery-server .
+# COPY only binary
+COPY --from=BUILDER /oidc-discovery-server/oidc-discovery-server .
 
 ENTRYPOINT ["./oidc-discovery-server"]
