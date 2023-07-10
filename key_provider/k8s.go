@@ -36,7 +36,7 @@ func (provider *K8SKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 	keys, err := jwt.ParseJWKS(body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error while parsing jwks from k8s in-cluster")
 	}
 
 	keys2 := make([]op.Key, len(keys))
