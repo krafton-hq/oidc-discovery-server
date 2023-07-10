@@ -96,10 +96,6 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	return result, nil
 }
 
-func (provider *HTTPKeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
-	return nil, nil
-}
-
 func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := jwt.NewCachedJsonWebKeySet(issuer)
