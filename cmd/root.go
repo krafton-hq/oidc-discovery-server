@@ -7,6 +7,7 @@ import (
 	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/krafton-hq/oidc-discovery-server/server"
 	"github.com/spf13/viper"
+	"github.com/zitadel/oidc/v2/pkg/op"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
@@ -44,9 +45,27 @@ var rootCmd = &cobra.Command{
 		}
 
 		issuerProvider := issuer_provider.NewChainIssuerProvider(issuerProviders...)
-		keyProvider := key_provider.NewHTTPKeyProvider(issuerProvider)
 
-		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
+		keyProviders := make([]op.KeyProvider, 0)
+
+		httpKeyProvider := key_provider.NewHTTPKeyProvider(issuerProvider)
+		keyProviders = append(keyProviders, httpKeyProvider)
+		if sub := viper.Sub("keyProvider.k8s"); sub != nil {
+			log.Debugln("adding k8s key provider")
+			log.Debugln(sub)
+
+			provider, err := key_provider.NewK8SKeyProvider()
+			if err != nil {
+				log.Fatalf("failed to create k8s key provider. %v", err)
+			} else {
+				keyProviders = append(keyProviders, provider)
+			}
+		}
+
+		keyProvider := key_provider.NewChainKeyProvider(keyProviders...)
+
+		http.Handle(issuerParsed.Path, server.OIDCHandler(Issuer, keyProvider))
+		http.Handle(issuerParsed.Path, server.OIDCHTTPHandler(Issuer, httpKeyProvider))
 
 		log.Infof("starting server on port %d\n", Port)
 		err = http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)

@@ -16,7 +16,7 @@ import (
 const KeysPath = "/keys"
 
 // TODO: log error on error handling
-func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Router {
+func OIDCHandler(issuer string, keyProvider op.KeyProvider) *mux.Router {
 	router := mux.NewRouter()
 
 	discoveryConf := oidc.DiscoveryConfiguration{
@@ -30,8 +30,14 @@ func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Rout
 	})
 
 	router.HandleFunc(KeysPath, func(w http.ResponseWriter, r *http.Request) {
-		op.Keys(w, r, op.KeyProvider(keyProvider))
+		op.Keys(w, r, keyProvider)
 	})
+
+	return router
+}
+
+func OIDCHTTPHandler(issuer string, keyProvider *key_provider.HTTPKeyProvider) http.Handler {
+	router := mux.NewRouter()
 
 	keysIssuerPath, _ := url.JoinPath(KeysPath, "{issuer}")
 	router.HandleFunc(keysIssuerPath, func(w http.ResponseWriter, r *http.Request) {
