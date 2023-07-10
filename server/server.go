@@ -36,7 +36,7 @@ func OIDCHandler(issuer string, keyProvider op.KeyProvider) *mux.Router {
 	return router
 }
 
-func OIDCHTTPHandler(issuer string, keyProvider *key_provider.HTTPKeyProvider) http.Handler {
+func OIDCHTTPHandler(keyProvider *key_provider.HTTPKeyProvider) http.Handler {
 	router := mux.NewRouter()
 
 	keysIssuerPath, _ := url.JoinPath(KeysPath, "{issuer}")
