@@ -56,7 +56,7 @@ func (keySet *CachedJsonWebKeySet) Keys() []op.Key {
 	}
 }
 
-func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.Client, force bool) error {
+func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.Client, maxTTLSeconds int, force bool) error {
 	keySet.lock.Lock()
 	defer keySet.lock.Unlock()
 
@@ -83,15 +83,14 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 		return errors.Wrapf(err, "failed to discover OIDC configuration. issuer: %s", keySet.issuer)
 	}
 
-	jsonWebKeySet, ttl, err := getKeySet(conf.JwksURI, httpClient)
+	jsonWebKeySet, ttlSeconds, err := getKeySet(conf.JwksURI, httpClient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
 
-	log.Debugf("updated keys: %v\n", jsonWebKeySet.Keys)
-
 	keySet.jwks = *jsonWebKeySet
-	keySet.expires = time.Now().Add(time.Duration(ttl) * time.Second)
+	keySet.expires = time.Now().Add(time.Duration(math.Min(float64(ttlSeconds), float64(maxTTLSeconds))) * time.Second)
+	log.Debugf("updated keys: %v. next TTL: %s\n", jsonWebKeySet.Keys, keySet.expires)
 
 	return nil
 }
@@ -110,7 +109,7 @@ func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, in
 	}
 
 	cache := res.Header.Get("Cache-Control")
-	ttl := getTTL(cache)
+	ttlSeconds := getTTLSeconds(cache)
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -128,7 +127,7 @@ func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, in
 		return nil, 0, err
 	}
 
-	return &jose.JSONWebKeySet{Keys: keys}, ttl, nil
+	return &jose.JSONWebKeySet{Keys: keys}, ttlSeconds, nil
 }
 
 func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
@@ -153,7 +152,7 @@ func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
 	return keys, nil
 }
 
-func getTTL(cacheControlHeader string) int {
+func getTTLSeconds(cacheControlHeader string) int {
 	parsed, err := cacheobject.ParseResponseCacheControl(cacheControlHeader)
 	if err != nil {
 		return 0

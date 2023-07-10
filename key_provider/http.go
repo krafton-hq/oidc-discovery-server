@@ -128,7 +128,7 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 	if keySet.Expired(time.Now()) {
 		log.Infof("keyset expired. issuer: %v\n", keySet.Issuer())
 
-		err := keySet.Update(ctx, provider.client, force)
+		err := keySet.Update(ctx, provider.client, provider.MaxTTLSeconds(), force)
 		if err != nil {
 			return nil, err
 		}
