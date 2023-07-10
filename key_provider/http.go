@@ -117,7 +117,7 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 			return nil, err
 		}
 	} else {
-		log.Debug("keyset not expired. skipping update.\n")
+		log.Debugln("keyset not expired. skipping update.")
 	}
 
 	return keySet, nil
