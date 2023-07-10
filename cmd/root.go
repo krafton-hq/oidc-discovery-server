@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
 	"github.com/krafton-hq/oidc-discovery-server/server"
 	"github.com/spf13/viper"
@@ -77,4 +78,8 @@ func init() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Warnf("failed to read config file. %v", err)
 	}
+
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Infof("config file changed: %s", e.Name)
+	})
 }
