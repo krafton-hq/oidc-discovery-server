@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/krafton-hq/oidc-discovery-server/jwt"
+	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 const KeysPath = "/keys"
 
 // TODO: log error on error handling
-func Handler(issuer string, keyProvider *KeyProvider) *mux.Router {
+func Handler(issuer string, keyProvider *key_provider.KeyProvider) *mux.Router {
 	router := mux.NewRouter()
 
 	discoveryConf := oidc.DiscoveryConfiguration{
@@ -36,7 +37,7 @@ func Handler(issuer string, keyProvider *KeyProvider) *mux.Router {
 	router.HandleFunc(keysIssuerPath, func(w http.ResponseWriter, r *http.Request) {
 		issuer := r.URL.Query().Get("issuer")
 
-		keySet, err := keyProvider.getKeySetFromIssuer(context.TODO(), issuer, false)
+		keySet, err := keyProvider.GetKeySetFromIssuer(context.TODO(), issuer, false)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

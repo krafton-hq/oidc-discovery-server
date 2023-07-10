@@ -1,4 +1,4 @@
-package server
+package key_provider
 
 import (
 	"context"
@@ -55,7 +55,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 			log.Infof("lookup issuer: %s\n", issuer)
 
 			if reachedIssuers.SetIfAbsent(issuer, struct{}{}) {
-				keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
+				keySet, err := provider.GetKeySetFromIssuer(ctx, issuer, false)
 				if err != nil {
 					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
@@ -100,7 +100,7 @@ func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) 
 	return nil, nil
 }
 
-func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
+func (provider *KeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := jwt.NewCachedJsonWebKeySet(issuer)
 	if !provider.cachedKeySets.SetIfAbsent(issuer, keySet) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
+	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/krafton-hq/oidc-discovery-server/server"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -43,7 +44,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		issuerProvider := issuer_provider.NewChainIssuerProvider(issuerProviders...)
-		keyProvider := server.NewKeyProvider(issuerProvider)
+		keyProvider := key_provider.NewKeyProvider(issuerProvider)
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 
