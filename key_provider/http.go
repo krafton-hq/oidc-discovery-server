@@ -17,29 +17,29 @@ import (
 // TODO: module-level structured logging
 var log = zap.Must(zap.NewDevelopment()).Sugar()
 
-type KeyProvider struct {
+type HTTPKeyProvider struct {
 	client *http.Client
 
 	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) *KeyProvider {
-	return &KeyProvider{
+func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider) *HTTPKeyProvider {
+	return &HTTPKeyProvider{
 		client:         http.DefaultClient,
 		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
 }
 
-func (provider *KeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySet, bool) {
+func (provider *HTTPKeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySet, bool) {
 	keySet, exists := provider.cachedKeySets.Get(issuer)
 
 	// copy to avoid modifying keySet in outside
 	return &*keySet, exists
 }
 
-func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
+func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	defer perf.Perf("KeySet")()
 
 	reachedIssuers := cmap.New[struct{}]()
@@ -96,11 +96,11 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	return result, nil
 }
 
-func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
+func (provider *HTTPKeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
 	return nil, nil
 }
 
-func (provider *KeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
+func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := jwt.NewCachedJsonWebKeySet(issuer)
 	if !provider.cachedKeySets.SetIfAbsent(issuer, keySet) {

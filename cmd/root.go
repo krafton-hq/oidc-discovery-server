@@ -44,7 +44,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		issuerProvider := issuer_provider.NewChainIssuerProvider(issuerProviders...)
-		keyProvider := key_provider.NewKeyProvider(issuerProvider)
+		keyProvider := key_provider.NewHTTPKeyProvider(issuerProvider)
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 

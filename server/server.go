@@ -16,7 +16,7 @@ import (
 const KeysPath = "/keys"
 
 // TODO: log error on error handling
-func Handler(issuer string, keyProvider *key_provider.KeyProvider) *mux.Router {
+func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Router {
 	router := mux.NewRouter()
 
 	discoveryConf := oidc.DiscoveryConfiguration{
