@@ -58,4 +58,9 @@ public enum FallbackDiscoveryMode {
      * the URL used to discover the provider configuration is not the same as the issuer claim on the token.
      */
     KUBERNETES_DISCOVER_PUBLIC_KEYS,
+    /*
+    * The provided Issuer URL is used for discovery of additional trusted issuer.
+    * this flow is almost same as KUBERNETES_DISCOVER_TRUSTED_ISSUER, but the issuer URL is provided by user.
+     */
+    HTTP_DISCOVER_TRUSTED_ISSUER,
 }

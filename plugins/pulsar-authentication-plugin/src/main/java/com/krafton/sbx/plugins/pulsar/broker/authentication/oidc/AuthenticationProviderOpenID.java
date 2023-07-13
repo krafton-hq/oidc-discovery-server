@@ -127,9 +127,12 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     static final int HTTP_READ_TIMEOUT_MILLIS_DEFAULT = 10_000;
     static final String REQUIRE_HTTPS = "openIDRequireIssuersUseHttps";
     static final boolean REQUIRE_HTTPS_DEFAULT = true;
+    static final String DISCOVERY_ISSUER = "openIDDiscoveryIssuer";
 
     // The list of audiences that are allowed to connect to this broker. A valid JWT must contain one of the audiences.
     private String[] allowedAudiences;
+    // Issuer URL used for discovering additional issuer. This value is provided by the user.
+    private String discoveryIssuer;
 
     @Override
     public void initialize(ServiceConfiguration config) throws IOException {
@@ -143,6 +146,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
                 FALLBACK_DISCOVERY_MODE, FallbackDiscoveryMode.DISABLED.name()));
         this.issuers = validateIssuers(getConfigValueAsSet(config, ALLOWED_TOKEN_ISSUERS), requireHttps,
                 fallbackDiscoveryMode != FallbackDiscoveryMode.DISABLED);
+        this.discoveryIssuer = ConfigUtils.getConfigValueAsString(config, DISCOVERY_ISSUER, null);
 
         int connectionTimeout = getConfigValueAsInt(config, HTTP_CONNECTION_TIMEOUT_MILLIS,
                 HTTP_CONNECTION_TIMEOUT_MILLIS_DEFAULT);
@@ -329,6 +333,9 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
         } else if (fallbackDiscoveryMode == FallbackDiscoveryMode.KUBERNETES_DISCOVER_PUBLIC_KEYS) {
             return openIDProviderMetadataCache.getOpenIDProviderMetadataForKubernetesApiServer(jwt.getIssuer())
                     .thenCompose(__ -> jwksCache.getJwkFromKubernetesApiServer(jwt.getKeyId()));
+        } else if (fallbackDiscoveryMode == FallbackDiscoveryMode.HTTP_DISCOVER_TRUSTED_ISSUER) {
+            return openIDProviderMetadataCache.getOpenIDProviderMetadataForIssuer(discoveryIssuer)
+                    .thenCompose(metadata -> jwksCache.getJwk(metadata.getJwksUri(), jwt.getKeyId()));
         } else {
             incrementFailureMetric(AuthenticationExceptionCode.UNSUPPORTED_ISSUER);
             return CompletableFuture
