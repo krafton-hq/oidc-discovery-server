@@ -68,7 +68,7 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
 					for _, key := range keySet.Keys() {
-						log.Debugf("appending key to result. key: %+v\n", key)
+						log.Debugf("key: %s\n", key.ID())
 						keys = append(keys, key)
 					}
 				}
@@ -76,6 +76,7 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 				log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
 			}
 
+			log.Infof("resolved %d keys.\n", len(keys))
 			if err := p.Resolve(keys); err != nil {
 				log.Error(err)
 			}

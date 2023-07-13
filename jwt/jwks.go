@@ -91,7 +91,7 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 
 	keySet.updateInternalKeySet(fetchedKeySet, time.Now())
 	keySet.nextRefresh = time.Now().Add(time.Duration(math.Min(float64(ttlSeconds), float64(maxTTLSeconds))) * time.Second)
-	log.Debugf("updated keys: %v. next refresh: %s\n", keySet.Keys(), keySet.nextRefresh)
+	log.Debugf("jwks updated. issuer: %s. next refresh: %s, keys: %s\n", keySet.Issuer(), keySet.nextRefresh, keySet.Keys())
 
 	return nil
 }
