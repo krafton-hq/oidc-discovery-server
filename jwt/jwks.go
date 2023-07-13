@@ -104,11 +104,19 @@ func (keySet *CachedJsonWebKeySet) updateInternalKeySet(keys []JsonWebKey, now t
 
 	for _, key := range oldKeys {
 		if key.Expires(now) {
+			log.Infof("removing expired key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+
 			delete(keySet.keys, key.KeyID)
 		}
 	}
 
 	for _, key := range keys {
+		if _, ok := keySet.keys[key.KeyID]; ok {
+			log.Infof("updating existing key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+		} else {
+			log.Infof("adding new key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+		}
+
 		keySet.keys[key.KeyID] = key
 	}
 }
