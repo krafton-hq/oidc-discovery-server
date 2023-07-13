@@ -30,11 +30,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.pulsar/pulsar-broker -->
+        <!-- https://mvnrepository.com/artifact/io.streamnative/pulsar-broker-auth-oidc -->
         <dependency>
-            <groupId>org.apache.pulsar</groupId>
-            <artifactId>pulsar-broker</artifactId>
-            <version>3.0.0</version>
+            <groupId>io.streamnative</groupId>
+            <artifactId>pulsar-broker-auth-oidc</artifactId>
+            <version>3.0.0.4</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
