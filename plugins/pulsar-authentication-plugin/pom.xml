@@ -10,7 +10,6 @@
     <version>${project.version}</version>
 
     <name>pulsar-authentication-plugin</name>
-    <!-- FIXME change it to the project's website -->
     <url>https://github.com/krafton-hq/oidc-discovery-server</url>
 
     <properties>
@@ -24,6 +23,7 @@
         <jsonwebtoken.version>0.11.5</jsonwebtoken.version>
         <kubernetesclient.version>18.0.0</kubernetesclient.version>
         <broker.version>3.0.0</broker.version>
+        <netty.version>4.1.94.Final</netty.version>
     </properties>
 
     <dependencies>
@@ -35,6 +35,10 @@
                 <exclusion>
                     <groupId>io.grpc</groupId>
                     <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-common</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -101,7 +105,37 @@
             <version>${jsonwebtoken.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.26</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>7.7.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+            <version>${netty.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-common</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
