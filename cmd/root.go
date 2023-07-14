@@ -66,7 +66,10 @@ var rootCmd = &cobra.Command{
 		keyProvider := key_provider.NewChainKeyProvider(keyProviders...)
 
 		router := mux.NewRouter()
-		server.RegisterHandler(router, Issuer, keyProvider, httpKeyProvider)
+		err = server.RegisterHandler(router, Issuer, keyProvider, httpKeyProvider)
+		if err != nil {
+			log.Fatalf("failed to register handler. %v", err)
+		}
 
 		http.Handle(issuerParsed.Path, router)
 
@@ -96,6 +99,7 @@ func init() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("config")
 	viper.WatchConfig()
 
 	if err := viper.ReadInConfig(); err != nil {
