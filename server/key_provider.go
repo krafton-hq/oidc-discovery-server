@@ -7,34 +7,26 @@ import (
 	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/op"
 	"github.krafton.com/sbx/oidc-discovery-server/jwt"
+	"github.krafton.com/sbx/oidc-discovery-server/server/issuer_provider"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
 
 // TODO: module-level structured logging
-var log *zap.SugaredLogger
-
-func init() {
-	log2, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
-	log = log2.Sugar()
-}
+var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type KeyProvider struct {
 	client *http.Client
 
-	trustedIssuers func() []string
+	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewKeyProvider(trustedIssuers func() []string) op.KeyProvider {
+func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) op.KeyProvider {
 	return &KeyProvider{
 		client:         http.DefaultClient,
-		trustedIssuers: trustedIssuers,
+		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
 }
@@ -44,9 +36,11 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	reachedIssuers := cmap.New[struct{}]()
 	promises := make([]interface{}, 0)
 
-	for _, issuer := range provider.trustedIssuers() {
+	for _, issuer := range provider.issuerProvider.Issuers() {
 		p := promise.NewPromise()
+		promises = append(promises, p)
 		issuer := issuer
+
 		go func() {
 			keys := make([]op.Key, 0)
 			log.Infof("lookup issuer: %s\n", issuer)
@@ -77,15 +71,20 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 		return nil, errors.Wrapf(err, "error while fetching multiple keys from issuers")
 	}
 
-	keys := make([]op.Key, 0)
+	result := make([]op.Key, 0)
 
-	for _, value := range values.([][]*jwt.JsonWebKey) {
-		for _, key := range value {
-			keys = append(keys, key)
+	for _, value := range values.([]interface{}) {
+		keys, err := value.(*promise.Promise).Get()
+		if err != nil {
+			log.Error(err)
+		} else {
+			for _, key := range keys.([]op.Key) {
+				result = append(result, key)
+			}
 		}
 	}
 
-	return keys, nil
+	return result, nil
 }
 
 func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
