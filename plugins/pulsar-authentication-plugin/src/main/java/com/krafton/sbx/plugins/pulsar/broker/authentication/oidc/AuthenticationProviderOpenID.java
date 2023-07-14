@@ -165,8 +165,12 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
                 .setSslContext(sslContext)
                 .build();
         httpClient = new DefaultAsyncHttpClient(clientConfig);
-        ApiClient k8sApiClient =
-                fallbackDiscoveryMode != FallbackDiscoveryMode.DISABLED ? Config.defaultClient() : null;
+
+        ApiClient k8sApiClient = switch (fallbackDiscoveryMode) {
+            case DISABLED, HTTP_DISCOVER_TRUSTED_ISSUER -> null;
+            default -> Config.defaultClient();
+        };
+
         this.openIDProviderMetadataCache = new OpenIDProviderMetadataCache(config, httpClient, k8sApiClient);
         this.jwksCache = new JwksCache(config, httpClient, k8sApiClient);
     }
