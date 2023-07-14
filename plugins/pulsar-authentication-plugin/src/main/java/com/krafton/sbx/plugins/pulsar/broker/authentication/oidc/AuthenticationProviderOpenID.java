@@ -441,7 +441,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     }
 
     static void incrementFailureMetric(AuthenticationExceptionCode code) {
-        AuthenticationMetrics.authenticateFailure(SIMPLE_NAME, AUTH_METHOD_NAME, code);
+        AuthenticationMetrics.authenticateFailure(SIMPLE_NAME, AUTH_METHOD_NAME, code.toString());
     }
 
     /**
