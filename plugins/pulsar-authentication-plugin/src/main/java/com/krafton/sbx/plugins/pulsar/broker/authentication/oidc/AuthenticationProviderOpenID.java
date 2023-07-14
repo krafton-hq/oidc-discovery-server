@@ -146,6 +146,8 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
                 FALLBACK_DISCOVERY_MODE, FallbackDiscoveryMode.DISABLED.name()));
         this.issuers = validateIssuers(getConfigValueAsSet(config, ALLOWED_TOKEN_ISSUERS), requireHttps,
                 fallbackDiscoveryMode != FallbackDiscoveryMode.DISABLED);
+        // as we cannot alter `ServiceConfiguration`, accept issuer variable using env instead.
+        this.discoveryIssuer = System.getenv("OPENID_DISCOVERY_ISSUER");
 
         int connectionTimeout = getConfigValueAsInt(config, HTTP_CONNECTION_TIMEOUT_MILLIS,
                 HTTP_CONNECTION_TIMEOUT_MILLIS_DEFAULT);
