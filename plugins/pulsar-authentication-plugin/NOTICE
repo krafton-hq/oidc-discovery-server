@@ -1,3 +1,3 @@
-source code was copied from the original apache/pulsar project for injecting custom codes.
+Source code was copied from the original apache/pulsar project for injecting custom codes.
 
-URL link: https://github.com/apache/pulsar/tree/ce28ddaacc58dac4f69a8f48947f53056131b74e/pulsar-broker-auth-oidc/src/main/java/org/apache/pulsar/broker/authentication/oidc
+ref: https://github.com/apache/pulsar/tree/v3.0.0/pulsar-broker-auth-oidc/src/main/java/org/apache/pulsar/broker/authentication/oidc

@@ -142,16 +142,15 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
         this.acceptedTimeLeewaySeconds = getConfigValueAsInt(config, ACCEPTED_TIME_LEEWAY_SECONDS,
                 ACCEPTED_TIME_LEEWAY_SECONDS_DEFAULT);
         boolean requireHttps = getConfigValueAsBoolean(config, REQUIRE_HTTPS, REQUIRE_HTTPS_DEFAULT);
-        this.fallbackDiscoveryMode = FallbackDiscoveryMode.valueOf(ConfigUtils.getConfigValueAsString(config,
+        this.fallbackDiscoveryMode = FallbackDiscoveryMode.valueOf(getConfigValueAsString(config,
                 FALLBACK_DISCOVERY_MODE, FallbackDiscoveryMode.DISABLED.name()));
         this.issuers = validateIssuers(getConfigValueAsSet(config, ALLOWED_TOKEN_ISSUERS), requireHttps,
                 fallbackDiscoveryMode != FallbackDiscoveryMode.DISABLED);
-        this.discoveryIssuer = ConfigUtils.getConfigValueAsString(config, DISCOVERY_ISSUER, null);
 
         int connectionTimeout = getConfigValueAsInt(config, HTTP_CONNECTION_TIMEOUT_MILLIS,
                 HTTP_CONNECTION_TIMEOUT_MILLIS_DEFAULT);
         int readTimeout = getConfigValueAsInt(config, HTTP_READ_TIMEOUT_MILLIS, HTTP_READ_TIMEOUT_MILLIS_DEFAULT);
-        String trustCertsFilePath = ConfigUtils.getConfigValueAsString(config, ISSUER_TRUST_CERTS_FILE_PATH, null);
+        String trustCertsFilePath = getConfigValueAsString(config, ISSUER_TRUST_CERTS_FILE_PATH, null);
         SslContext sslContext = null;
         if (trustCertsFilePath != null) {
             // Use default settings for everything but the trust store.
