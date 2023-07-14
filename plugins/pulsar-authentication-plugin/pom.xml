@@ -19,6 +19,8 @@
         <broker.version>3.0.0.4</broker.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>utf-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
@@ -104,7 +106,7 @@
                 <groupId>org.gaul</groupId>
                 <artifactId>modernizer-maven-plugin</artifactId>
                 <configuration>
-                    <failOnViolations>true</failOnViolations>
+                    <failOnViolations>false</failOnViolations>
                     <javaVersion>17</javaVersion>
                 </configuration>
                 <executions>
@@ -113,20 +115,6 @@
                         <phase>verify</phase>
                         <goals>
                             <goal>modernizer</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>checkstyle</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>

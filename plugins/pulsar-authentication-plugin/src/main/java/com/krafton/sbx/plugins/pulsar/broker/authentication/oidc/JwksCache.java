@@ -68,7 +68,7 @@ public class JwksCache {
             // Store the time of the retrieval, even though it might be a little early or the call might fail.
             jwksLastRefreshTime.put(jwksUri, System.nanoTime());
             if (jwksUri.isPresent()) {
-                return getJwksFromJwksUri(jwksUri.get());
+                return getJwksFromJwksUri(jwksUri.orElseThrow());
             } else {
                 return getJwksFromKubernetesApiServer();
             }

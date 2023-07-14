@@ -59,7 +59,7 @@ class OpenIDProviderMetadataCache {
         this.wellKnownApi = apiClient != null ? new WellKnownApi(apiClient) : null;
         AsyncCacheLoader<Optional<String>, OpenIDProviderMetadata> loader = (issuer, executor) -> {
             if (issuer.isPresent()) {
-                return loadOpenIDProviderMetadataForIssuer(issuer.get());
+                return loadOpenIDProviderMetadataForIssuer(issuer.orElseThrow());
             } else {
                 return loadOpenIDProviderMetadataForKubernetesApiServer();
             }
