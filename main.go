@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.krafton.com/sbx/oidc-discovery-server/cmd"
 
 func main() {
-	fmt.Println("Hello, World!")
+	cmd.Execute()
 }
