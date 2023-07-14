@@ -68,7 +68,7 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
 					for _, key := range keySet.Keys() {
-						log.Debugf("appending key to result. key: %+v\n", key)
+						log.Debugf("key: %s\n", key.ID())
 						keys = append(keys, key)
 					}
 				}
@@ -76,6 +76,7 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 				log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
 			}
 
+			log.Infof("resolved %d keys.\n", len(keys))
 			if err := p.Resolve(keys); err != nil {
 				log.Error(err)
 			}
@@ -125,10 +126,10 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 		log.Debugf("key set not exists. created new one: %v\n", keySet)
 	}
 
-	if keySet.Expired(time.Now()) {
+	if keySet.ShouldRefresh(time.Now()) {
 		log.Infof("keyset expired. issuer: %v\n", keySet.Issuer())
 
-		err := keySet.Update(ctx, provider.client, force)
+		err := keySet.Update(ctx, provider.client, provider.MaxTTLSeconds(), force)
 		if err != nil {
 			return nil, err
 		}
