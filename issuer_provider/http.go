@@ -1,10 +1,10 @@
 package issuer_provider
 
 import (
-	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
+	"github.krafton.com/sbx/oidc-discovery-server/util/perf"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -77,4 +77,8 @@ func (provider *HTTPIssuerProvider) Endpoint() string {
 
 func (provider *HTTPIssuerProvider) GJsonQuery() string {
 	return provider.config.GetString("gjsonQuery")
+}
+
+func (provider *HTTPIssuerProvider) MaxTTLSeconds() int {
+	return provider.config.GetInt("maxTTLSeconds")
 }

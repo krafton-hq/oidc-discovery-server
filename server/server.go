@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"github.com/krafton-hq/oidc-discovery-server/jwt"
-	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.krafton.com/sbx/oidc-discovery-server/jwt"
+	"github.krafton.com/sbx/oidc-discovery-server/key_provider"
 	"net/http"
 	"net/url"
 	"path"
@@ -15,10 +15,13 @@ import (
 
 const KeysPath = "/keys"
 
-// TODO: log error on error handling
-func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Router {
-	router := mux.NewRouter()
+func RegisterHandler(router *mux.Router, issuer string, keyProvider op.KeyProvider, httpKeyProvider *key_provider.HTTPKeyProvider) {
+	OIDCHandler(router, issuer, keyProvider)
+	OIDCHTTPHandler(router, httpKeyProvider)
+}
 
+// TODO: log error on error handling
+func OIDCHandler(router *mux.Router, issuer string, keyProvider op.KeyProvider) {
 	discoveryConf := oidc.DiscoveryConfiguration{
 		Issuer:                           issuer,
 		JwksURI:                          path.Join(issuer, KeysPath),
@@ -30,9 +33,11 @@ func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Rout
 	})
 
 	router.HandleFunc(KeysPath, func(w http.ResponseWriter, r *http.Request) {
-		op.Keys(w, r, op.KeyProvider(keyProvider))
+		op.Keys(w, r, keyProvider)
 	})
+}
 
+func OIDCHTTPHandler(router *mux.Router, keyProvider *key_provider.HTTPKeyProvider) {
 	keysIssuerPath, _ := url.JoinPath(KeysPath, "{issuer}")
 	router.HandleFunc(keysIssuerPath, func(w http.ResponseWriter, r *http.Request) {
 		issuer := r.URL.Query().Get("issuer")
@@ -54,6 +59,4 @@ func Handler(issuer string, keyProvider *key_provider.HTTPKeyProvider) *mux.Rout
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
-
-	return router
 }

@@ -3,12 +3,13 @@ package key_provider
 import (
 	"context"
 	"github.com/fanliao/go-promise"
-	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
-	"github.com/krafton-hq/oidc-discovery-server/jwt"
-	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.krafton.com/sbx/oidc-discovery-server/issuer_provider"
+	"github.krafton.com/sbx/oidc-discovery-server/jwt"
+	"github.krafton.com/sbx/oidc-discovery-server/util/perf"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
@@ -18,15 +19,22 @@ import (
 var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type HTTPKeyProvider struct {
-	client *http.Client
-
+	client         *http.Client
+	config         *viper.Viper
 	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider) *HTTPKeyProvider {
+func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider, config *viper.Viper) *HTTPKeyProvider {
+	if config == nil {
+		config = viper.New()
+		// TODO: remove magic strings
+		config.Set("maxTTLSeconds", 300)
+	}
+
 	return &HTTPKeyProvider{
 		client:         http.DefaultClient,
+		config:         config,
 		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
@@ -81,15 +89,23 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	}
 
 	result := make([]op.Key, 0)
+	checked := make(map[string]struct{})
 
 	for _, value := range values.([]interface{}) {
 		keys, err := value.(*promise.Promise).Get()
 		if err != nil {
 			log.Error(err)
-		} else {
-			for _, key := range keys.([]op.Key) {
-				result = append(result, key)
+			continue
+		}
+
+		for _, key := range keys.([]op.Key) {
+			if _, ok := checked[key.ID()]; ok {
+				log.Warnf("kid %s already exists. skipping.\n", key.ID())
+				continue
 			}
+
+			checked[key.ID()] = struct{}{}
+			result = append(result, key)
 		}
 	}
 
@@ -121,4 +137,8 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 	}
 
 	return keySet, nil
+}
+
+func (provider *HTTPKeyProvider) MaxTTLSeconds() int {
+	return provider.config.GetInt("maxTTLSeconds")
 }
