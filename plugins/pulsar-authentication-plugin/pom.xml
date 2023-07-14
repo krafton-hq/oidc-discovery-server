@@ -7,25 +7,28 @@
 
     <groupId>com.krafton.sbx</groupId>
     <artifactId>pulsar-authentication-plugin</artifactId>
-    <version>0.1.0</version>
+    <version>${project.version}</version>
 
     <name>pulsar-authentication-plugin</name>
     <!-- FIXME change it to the project's website -->
     <url>https://github.com/krafton-hq/oidc-discovery-server</url>
 
     <properties>
-        <jsonwebtoken.version>0.11.5</jsonwebtoken.version>
-        <kubernetesclient.version>18.0.0</kubernetesclient.version>
-        <broker.version>3.0.0.4</broker.version>
+        <project.version>0.0.0-SNAPSHOT</project.version> <!-- override this on build -->
+
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>utf-8</project.reporting.outputEncoding>
+
+        <jsonwebtoken.version>0.11.5</jsonwebtoken.version>
+        <kubernetesclient.version>18.0.0</kubernetesclient.version>
+        <broker.version>3.0.0</broker.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>io.streamnative</groupId>
+            <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-broker-common</artifactId>
             <version>${broker.version}</version>
             <exclusions>
