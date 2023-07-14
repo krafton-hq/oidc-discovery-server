@@ -123,19 +123,34 @@ func getKeySet(jwksUri string, httpClient *http.Client) (*jose.JSONWebKeySet, in
 		return nil, 0, errors.Wrapf(err, "failed to unmarshal JWKS response body")
 	}
 
-	jwks := jose.JSONWebKeySet{Keys: nil}
+	keys, err := ParseJWKS(body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return &jose.JSONWebKeySet{Keys: keys}, ttl, nil
+}
+
+func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
+	var data = new(map[string]interface{})
+
+	if err := json.Unmarshal(body, data); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal JWKS response body")
+	}
+
+	keys := make([]jose.JSONWebKey, 0)
 
 	for _, key := range (*data)["keys"].([]interface{}) {
 		keyBytes, _ := json.Marshal(key)
-		webKey := new(jose.JSONWebKey)
+		webKey := jose.JSONWebKey{}
 		if err := webKey.UnmarshalJSON(keyBytes); err == nil {
-			jwks.Keys = append(jwks.Keys, *webKey)
+			keys = append(keys, webKey)
 		} else {
 			log.Warnf("failed to unmarshal key: %v\n", err)
 		}
 	}
 
-	return &jwks, ttl, nil
+	return keys, nil
 }
 
 func getTTL(cacheControlHeader string) int {

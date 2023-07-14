@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/krafton-hq/oidc-discovery-server/issuer_provider"
+	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/krafton-hq/oidc-discovery-server/server"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -32,15 +34,17 @@ var rootCmd = &cobra.Command{
 		issuerProviders := make([]issuer_provider.IssuerProvider, 0)
 		if sub := viper.Sub("issuerProvider.http"); sub != nil {
 			log.Debugln("adding http issuer provider")
+			log.Debugln(sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewHTTPIssuerProvider(sub))
 		}
 		if sub := viper.Sub("issuerProvider.static"); sub != nil {
 			log.Debugln("adding static issuer provider")
+			log.Debugln(sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewFileIssuerProvider(sub))
 		}
 
 		issuerProvider := issuer_provider.NewChainIssuerProvider(issuerProviders...)
-		keyProvider := server.NewKeyProvider(issuerProvider)
+		keyProvider := key_provider.NewHTTPKeyProvider(issuerProvider)
 
 		http.Handle(issuerParsed.Path, server.Handler(Issuer, keyProvider))
 
@@ -75,4 +79,8 @@ func init() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Warnf("failed to read config file. %v", err)
 	}
+
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Infof("config file changed: %s", e.Name)
+	})
 }

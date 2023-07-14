@@ -1,4 +1,4 @@
-package server
+package key_provider
 
 import (
 	"context"
@@ -17,29 +17,29 @@ import (
 // TODO: module-level structured logging
 var log = zap.Must(zap.NewDevelopment()).Sugar()
 
-type KeyProvider struct {
+type HTTPKeyProvider struct {
 	client *http.Client
 
 	issuerProvider issuer_provider.IssuerProvider
 	cachedKeySets  cmap.ConcurrentMap[string, *jwt.CachedJsonWebKeySet]
 }
 
-func NewKeyProvider(issuerProvider issuer_provider.IssuerProvider) *KeyProvider {
-	return &KeyProvider{
+func NewHTTPKeyProvider(issuerProvider issuer_provider.IssuerProvider) *HTTPKeyProvider {
+	return &HTTPKeyProvider{
 		client:         http.DefaultClient,
 		issuerProvider: issuerProvider,
 		cachedKeySets:  cmap.New[*jwt.CachedJsonWebKeySet](),
 	}
 }
 
-func (provider *KeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySet, bool) {
+func (provider *HTTPKeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebKeySet, bool) {
 	keySet, exists := provider.cachedKeySets.Get(issuer)
 
 	// copy to avoid modifying keySet in outside
 	return &*keySet, exists
 }
 
-func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
+func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	defer perf.Perf("KeySet")()
 
 	reachedIssuers := cmap.New[struct{}]()
@@ -55,7 +55,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 			log.Infof("lookup issuer: %s\n", issuer)
 
 			if reachedIssuers.SetIfAbsent(issuer, struct{}{}) {
-				keySet, err := provider.getKeySetFromIssuer(ctx, issuer, false)
+				keySet, err := provider.GetKeySetFromIssuer(ctx, issuer, false)
 				if err != nil {
 					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
@@ -96,11 +96,7 @@ func (provider *KeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	return result, nil
 }
 
-func (provider *KeyProvider) getTrustedJWKS(ctx context.Context, issuer string) ([]op.Key, error) {
-	return nil, nil
-}
-
-func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
+func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := jwt.NewCachedJsonWebKeySet(issuer)
 	if !provider.cachedKeySets.SetIfAbsent(issuer, keySet) {
@@ -121,7 +117,7 @@ func (provider *KeyProvider) getKeySetFromIssuer(ctx context.Context, issuer str
 			return nil, err
 		}
 	} else {
-		log.Debug("keyset not expired. skipping update.\n")
+		log.Debugln("keyset not expired. skipping update.")
 	}
 
 	return keySet, nil
