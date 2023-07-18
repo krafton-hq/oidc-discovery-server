@@ -22,18 +22,14 @@ import static com.krafton.sbx.plugins.pulsar.broker.authentication.oidc.ConfigUt
 import static com.krafton.sbx.plugins.pulsar.broker.authentication.oidc.ConfigUtils.getConfigValueAsInt;
 import static com.krafton.sbx.plugins.pulsar.broker.authentication.oidc.ConfigUtils.getConfigValueAsSet;
 import static com.krafton.sbx.plugins.pulsar.broker.authentication.oidc.ConfigUtils.getConfigValueAsString;
+
 import com.auth0.jwk.InvalidPublicKeyException;
 import com.auth0.jwk.Jwk;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.RegisteredClaims;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.AlgorithmMismatchException;
-import com.auth0.jwt.exceptions.InvalidClaimException;
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.exceptions.SignatureVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.auth0.jwt.exceptions.*;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.Verification;
@@ -41,6 +37,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.Config;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -52,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import javax.naming.AuthenticationException;
 import javax.net.ssl.SSLSession;
+
 import org.apache.pulsar.broker.ServiceConfiguration;
 import org.apache.pulsar.broker.authentication.AuthenticationDataSource;
 import org.apache.pulsar.broker.authentication.AuthenticationProvider;
@@ -128,11 +126,13 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     static final String REQUIRE_HTTPS = "openIDRequireIssuersUseHttps";
     static final boolean REQUIRE_HTTPS_DEFAULT = true;
     static final String DISCOVERY_ISSUER = "openIDDiscoveryIssuer";
+    static final String ALLOWED_EMPTY_AUD_ISSUERS = "openIDAllowedEmptyAudienceIssuers";
 
     // The list of audiences that are allowed to connect to this broker. A valid JWT must contain one of the audiences.
     private String[] allowedAudiences;
     // Issuer URL used for discovering additional issuer. This value is provided by the user.
     private String discoveryIssuer;
+    private String[] allowedEmptyAudienceIssuers;
 
     @Override
     public void initialize(ServiceConfiguration config) throws IOException {
@@ -147,6 +147,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
         this.issuers = validateIssuers(getConfigValueAsSet(config, ALLOWED_TOKEN_ISSUERS), requireHttps,
                 fallbackDiscoveryMode != FallbackDiscoveryMode.DISABLED);
         this.discoveryIssuer = getConfigValueAsString(config, DISCOVERY_ISSUER);
+        this.allowedEmptyAudienceIssuers = getConfigValueAsSet(config, ALLOWED_EMPTY_AUD_ISSUERS).toArray(new String[0]);
 
         int connectionTimeout = getConfigValueAsInt(config, HTTP_CONNECTION_TIMEOUT_MILLIS,
                 HTTP_CONNECTION_TIMEOUT_MILLIS_DEFAULT);
@@ -195,6 +196,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
 
     /**
      * Authenticate the parameterized {@link AuthenticationDataSource} and return the decoded JWT.
+     *
      * @param authData - the authData containing the token.
      * @return a completed future with the decoded JWT, if the JWT is authenticated. Otherwise, a failed future.
      */
@@ -218,6 +220,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     /**
      * Get the role from a JWT at the configured role claim field.
      * NOTE: does not do any verification of the JWT
+     *
      * @param jwt - token to get the role from
      * @return the role, or null, if it is not set on the JWT
      */
@@ -258,7 +261,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
      * @param token - string JWT to be decoded
      * @return a decoded JWT
      * @throws AuthenticationException if the token string is null or if any part of the token contains
-     *         an invalid jwt or JSON format of each of the jwt parts.
+     *                                 an invalid jwt or JSON format of each of the jwt parts.
      */
     DecodedJWT decodeJWT(String token) throws AuthenticationException {
         if (token == null) {
@@ -317,6 +320,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     /**
      * Verify the JWT's issuer (iss) claim is one of the allowed issuers and then retrieve the JWK from the issuer. If
      * not, see {@link FallbackDiscoveryMode} for the fallback behavior.
+     *
      * @param jwt - the token to use to discover the issuer's JWKS URI, which is then used to retrieve the issuer's
      *            current public keys.
      * @return a JWK that can be used to verify the JWT's signature
@@ -361,16 +365,16 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
     /**
      * Build and return a validator for the parameters.
      *
-     * @param publicKey - the public key to use when configuring the validator
+     * @param publicKey    - the public key to use when configuring the validator
      * @param publicKeyAlg - the algorithm for the parameterized public key
-     * @param jwt - jwt to be verified and returned (only if verified)
+     * @param jwt          - jwt to be verified and returned (only if verified)
      * @return a validator to use for validating a JWT associated with the parameterized public key.
      * @throws AuthenticationException if the Public Key's algorithm is not supported or if the algorithm param does not
-     * match the Public Key's actual algorithm.
+     *                                 match the Public Key's actual algorithm.
      */
     DecodedJWT verifyJWT(PublicKey publicKey,
-                                String publicKeyAlg,
-                                DecodedJWT jwt) throws AuthenticationException {
+                         String publicKeyAlg,
+                         DecodedJWT jwt) throws AuthenticationException {
         if (publicKeyAlg == null) {
             incrementFailureMetric(AuthenticationExceptionCode.UNSUPPORTED_ALGORITHM);
             throw new AuthenticationException("PublicKey algorithm cannot be null");
@@ -408,22 +412,15 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
 
         // We verify issuer when retrieving the PublicKey, so it is not verified here.
         // The claim presence requirements are based on https://openid.net/specs/openid-connect-basic-1_0.html#IDToken
-         Verification verifierBuilder = JWT.require(alg)
-                .acceptLeeway(acceptedTimeLeewaySeconds)
-                .withAnyOfAudience(allowedAudiences)
-                .withClaimPresence(RegisteredClaims.ISSUED_AT)
-                .withClaimPresence(RegisteredClaims.EXPIRES_AT)
-                .withClaimPresence(RegisteredClaims.NOT_BEFORE)
-                .withClaimPresence(RegisteredClaims.SUBJECT);
-
-        if (isRoleClaimNotSubject) {
-            verifierBuilder = verifierBuilder.withClaimPresence(roleClaim);
-        }
-
-        JWTVerifier verifier = verifierBuilder.build();
+        JWTVerifier verifierWithoutAud = this.buildVerifier(alg, true);
+        JWTVerifier verifier = this.buildVerifier(alg, false);
 
         try {
-            return verifier.verify(jwt);
+            if (jwt.getAudience() == null) {
+                return verifierWithoutAud.verify(jwt);
+            } else {
+                return verifier.verify(jwt);
+            }
         } catch (TokenExpiredException e) {
             incrementFailureMetric(AuthenticationExceptionCode.EXPIRED_JWT);
             throw new AuthenticationException("JWT expired: " + e.getMessage());
@@ -454,10 +451,11 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
      * the plugin to authenticate any token. Thus, it fails initialization if the configuration is
      * missing. Each issuer URL should use the HTTPS scheme. The plugin fails initialization if any
      * issuer url is insecure, unless requireHttps is false.
-     * @param allowedIssuers - issuers to validate
-     * @param requireHttps - whether to require https for issuers.
+     *
+     * @param allowedIssuers    - issuers to validate
+     * @param requireHttps      - whether to require https for issuers.
      * @param allowEmptyIssuers - whether to allow empty issuers. This setting only makes sense when kubernetes is used
-     *                   as a fallback issuer.
+     *                          as a fallback issuer.
      * @return the validated issuers
      * @throws IllegalArgumentException if the allowedIssuers is empty, or contains insecure issuers when required
      */
@@ -480,6 +478,7 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
      * Validate the configured allow list of allowedAudiences. The allowedAudiences must be set because
      * JWT must have an audience claim.
      * See https://openid.net/specs/openid-connect-basic-1_0.html#IDTokenValidation.
+     *
      * @param allowedAudiences
      * @return the validated audiences
      */
@@ -488,5 +487,27 @@ public class AuthenticationProviderOpenID implements AuthenticationProvider {
             throw new IllegalArgumentException("Missing configured value for: " + ALLOWED_AUDIENCES);
         }
         return allowedAudiences.toArray(new String[0]);
+    }
+
+    private JWTVerifier buildVerifier(Algorithm alg, boolean ignoreAud) {
+        // VerifierBuilder is stateful, so we need to create a new one each time.
+        var verifierBuilder = JWT.require(alg)
+                .acceptLeeway(acceptedTimeLeewaySeconds)
+                .withClaimPresence(RegisteredClaims.ISSUED_AT)
+                .withClaimPresence(RegisteredClaims.EXPIRES_AT)
+                .withClaimPresence(RegisteredClaims.NOT_BEFORE)
+                .withClaimPresence(RegisteredClaims.SUBJECT);
+
+        if (isRoleClaimNotSubject) {
+            verifierBuilder = verifierBuilder.withClaimPresence(roleClaim);
+        }
+
+        if (ignoreAud) {
+            verifierBuilder = verifierBuilder.withIssuer(this.allowedEmptyAudienceIssuers);
+        } else {
+            verifierBuilder = verifierBuilder.withAnyOfAudience(this.allowedAudiences);
+        }
+
+        return verifierBuilder.build();
     }
 }
