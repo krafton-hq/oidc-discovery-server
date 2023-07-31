@@ -3,6 +3,7 @@ package key_provider
 import (
 	"context"
 	"github.com/zitadel/oidc/v2/pkg/op"
+	"go.uber.org/zap"
 )
 
 type ChainKeyProvider struct {
@@ -22,13 +23,13 @@ func (c ChainKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	for _, provider := range c.providers {
 		keySet, err := provider.KeySet(ctx)
 		if err != nil {
-			log.Warnf("error while getting keyset from provider: %s", err)
+			zap.S().Warnf("error while getting keyset from provider: %s", err)
 			continue
 		}
 
 		for _, key := range keySet {
 			if _, ok := checked[key.ID()]; ok {
-				log.Warnf("kid %s already exists. skipping.\n", key.ID())
+				zap.S().Warnf("kid %s already exists. skipping.\n", key.ID())
 				continue
 			}
 

@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"encoding/json"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,12 +15,8 @@ import (
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 )
-
-// TODO: module-level structured logging
-var log = zap.Must(zap.NewDevelopment()).Sugar()
 
 type CachedJsonWebKeySet struct {
 	lock sync.Mutex
@@ -76,18 +73,18 @@ func (keySet *CachedJsonWebKeySet) Update(
 	if !force {
 		if !keySet.ShouldRefresh(time.Now()) {
 			// somehow it's already updated. probably another goroutine.
-			log.Debugf("key set is not expired. skipping Update.\n")
+			zap.S().Debugf("key set is not expired. skipping Update.\n")
 			return nil
 		}
 	} else {
-		log.Debugf("force updating KeySet. issuer: %s.\n", keySet.issuer)
+		zap.S().Debugf("force updating KeySet. issuer: %s.\n", keySet.issuer)
 	}
 
 	oidcDocumentURL, err := url.JoinPath(keySet.issuer, OIDCDocumentPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to join url")
 	}
-	log.Debugf("fetching OIDC document from %s\n", oidcDocumentURL)
+	zap.S().Debugf("fetching OIDC document from %s\n", oidcDocumentURL)
 
 	conf, err := client.Discover(keySet.issuer, httpClient)
 	if err != nil {
@@ -105,7 +102,7 @@ func (keySet *CachedJsonWebKeySet) Update(
 
 	keySet.updateInternalKeySet(fetchedKeySet, time.Now())
 	keySet.nextRefresh = time.Now().Add(keyTTL)
-	log.Debugf("jwks updated. issuer: %s. next refresh: %s, keys: %s\n", keySet.Issuer(), keySet.nextRefresh, keySet.Keys())
+	zap.S().Debugf("jwks updated. issuer: %s. next refresh: %s, keys: %s\n", keySet.Issuer(), keySet.nextRefresh, keySet.Keys())
 
 	return nil
 }
@@ -118,7 +115,7 @@ func (keySet *CachedJsonWebKeySet) updateInternalKeySet(keys []JsonWebKey, now t
 
 	for _, key := range oldKeys {
 		if key.Expires(now) {
-			log.Infof("removing expired key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+			zap.S().Infof("removing expired key. key id: %s, expires: %s\n", key.KeyID, key.expires)
 
 			delete(keySet.keys, key.KeyID)
 		}
@@ -126,9 +123,9 @@ func (keySet *CachedJsonWebKeySet) updateInternalKeySet(keys []JsonWebKey, now t
 
 	for _, key := range keys {
 		if _, ok := keySet.keys[key.KeyID]; ok {
-			log.Infof("updating existing key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+			zap.S().Infof("updating existing key. key id: %s, expires: %s\n", key.KeyID, key.expires)
 		} else {
-			log.Infof("adding new key. key id: %s, expires: %s\n", key.KeyID, key.expires)
+			zap.S().Infof("adding new key. key id: %s, expires: %s\n", key.KeyID, key.expires)
 		}
 
 		keySet.keys[key.KeyID] = key
@@ -141,7 +138,7 @@ func (keySet *CachedJsonWebKeySet) ShouldRefresh(time time.Time) bool {
 }
 
 func fetchKeySet(jwksUri string, httpClient *http.Client, defaultKeyTTL time.Duration) ([]JsonWebKey, time.Duration, error) {
-	log.Infof("fetching JWKS from %s\n", jwksUri)
+	zap.S().Infof("fetching JWKS from %s\n", jwksUri)
 
 	res, err := httpClient.Get(jwksUri)
 	if err != nil {
@@ -193,7 +190,7 @@ func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
 		if err := webKey.UnmarshalJSON(keyBytes); err == nil {
 			keys = append(keys, webKey)
 		} else {
-			log.Warnf("failed to unmarshal key: %v\n", err)
+			zap.S().Warnf("failed to unmarshal key: %v\n", err)
 		}
 	}
 

@@ -15,9 +15,6 @@ import (
 	"time"
 )
 
-// TODO: module-level structured logging
-var log = zap.Must(zap.NewDevelopment()).Sugar()
-
 type HTTPKeyProvider struct {
 	client         *http.Client
 	config         *viper.Viper
@@ -48,6 +45,7 @@ func (provider *HTTPKeyProvider) KeysInCache(issuer string) (*jwt.CachedJsonWebK
 }
 
 func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
+
 	defer perf.Perf("KeySet")()
 
 	reachedIssuers := cmap.New[struct{}]()
@@ -60,25 +58,25 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 
 		go func() {
 			keys := make([]op.Key, 0)
-			log.Infof("lookup issuer: %s\n", issuer)
+			zap.S().Infof("lookup issuer: %s\n", issuer)
 
 			if reachedIssuers.SetIfAbsent(issuer, struct{}{}) {
 				keySet, err := provider.GetKeySetFromIssuer(ctx, issuer, false)
 				if err != nil {
-					log.Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
+					zap.S().Warnf("Error getting KeySet from issuer %s: %+v\n", issuer, err)
 				} else {
 					for _, key := range keySet.Keys() {
-						log.Debugf("key: %s\n", key.ID())
+						zap.S().Debugf("key: %s\n", key.ID())
 						keys = append(keys, key)
 					}
 				}
 			} else {
-				log.Warnf("Issuer %s already reached. Skipping.\n", issuer)
+				zap.S().Warnf("Issuer %s already reached. Skipping.\n", issuer)
 			}
 
-			log.Infof("resolved %d keys.\n", len(keys))
+			zap.S().Infof("resolved %d keys.\n", len(keys))
 			if err := p.Resolve(keys); err != nil {
-				log.Error(err)
+				zap.S().Error(err)
 			}
 		}()
 	}
@@ -95,13 +93,13 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 	for _, value := range values.([]interface{}) {
 		keys, err := value.(*promise.Promise).Get()
 		if err != nil {
-			log.Error(err)
+			zap.S().Error(err)
 			continue
 		}
 
 		for _, key := range keys.([]op.Key) {
 			if _, ok := checked[key.ID()]; ok {
-				log.Warnf("kid %s already exists. skipping.\n", key.ID())
+				zap.S().Warnf("kid %s already exists. skipping.\n", key.ID())
 				continue
 			}
 
@@ -126,18 +124,18 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 			panic("key set not exists")
 		}
 	} else {
-		log.Debugf("key set not exists. created new one: %v\n", keySet)
+		zap.S().Debugf("key set not exists. created new one: %v\n", keySet)
 	}
 
 	if keySet.ShouldRefresh(time.Now()) {
-		log.Infof("keyset expired. issuer: %v\n", keySet.Issuer())
+		zap.S().Infof("keyset expired. issuer: %v\n", keySet.Issuer())
 
 		err := keySet.Update(ctx, provider.client, defaultKeyTTL, maxKeyTTL, force)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		log.Debugln("keyset not expired. skipping update.")
+		zap.S().Debugln("keyset not expired. skipping update.")
 	}
 
 	return keySet, nil

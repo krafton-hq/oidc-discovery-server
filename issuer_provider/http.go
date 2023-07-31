@@ -10,9 +10,6 @@ import (
 	"net/http"
 )
 
-// TODO: module-level structured logging
-var log = zap.Must(zap.NewDevelopment()).Sugar()
-
 type HTTPIssuerProvider struct {
 	config *viper.Viper
 }
@@ -26,7 +23,7 @@ func NewHTTPIssuerProvider(config *viper.Viper) *HTTPIssuerProvider {
 func (provider *HTTPIssuerProvider) Issuers() []string {
 	issuers, err := provider.queryIssuers()
 	if err != nil {
-		log.Errorf("error while querying issuers: %v", err)
+		zap.S().Errorf("error while querying issuers: %v", err)
 		return []string{}
 	}
 
@@ -41,7 +38,7 @@ func (provider *HTTPIssuerProvider) queryIssuers() ([]string, error) {
 	}
 
 	gjsonQuery := provider.GJsonQuery()
-	log.Debugf("body: %s, gjsonQuery: %s\n", body, gjsonQuery)
+	zap.S().Debugf("body: %s, gjsonQuery: %s\n", body, gjsonQuery)
 	res := gjson.Get(body, gjsonQuery).Array()
 
 	issuers := make([]string, 0)

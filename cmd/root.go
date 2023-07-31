@@ -17,31 +17,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// TODO: module-level structured logging
-var log = zap.Must(zap.NewDevelopment()).Sugar()
-
 var Issuer string
 var Port int
 
 var rootCmd = &cobra.Command{
 	Use: "oidc-discovery-server",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info("initializing server...")
+		zap.S().Info("initializing server...")
 
 		issuerParsed, err := url.Parse(Issuer)
 		if err != nil {
-			log.Fatalf("issuer is not a valid URL. %v", err)
+			zap.S().Fatalf("issuer is not a valid URL. %v", err)
 		}
 
 		issuerProviders := make([]issuer_provider.IssuerProvider, 0)
 		if sub := viper.Sub("issuerProvider.http"); sub != nil {
-			log.Debugln("adding http issuer provider")
-			log.Debugln(sub)
+			zap.S().Debugln("adding http issuer provider")
+			zap.S().Debugln(sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewHTTPIssuerProvider(sub))
 		}
 		if sub := viper.Sub("issuerProvider.static"); sub != nil {
-			log.Debugln("adding static issuer provider")
-			log.Debugln(sub)
+			zap.S().Debugln("adding static issuer provider")
+			zap.S().Debugln(sub)
 			issuerProviders = append(issuerProviders, issuer_provider.NewFileIssuerProvider(sub))
 		}
 
@@ -52,12 +49,12 @@ var rootCmd = &cobra.Command{
 		httpKeyProvider := key_provider.NewHTTPKeyProvider(issuerProvider, viper.Sub("keyProvider.http"))
 		keyProviders = append(keyProviders, httpKeyProvider)
 		if sub := viper.Sub("keyProvider.k8s"); sub != nil {
-			log.Debugln("adding k8s key provider")
-			log.Debugln(sub)
+			zap.S().Debugln("adding k8s key provider")
+			zap.S().Debugln(sub)
 
 			provider, err := key_provider.NewK8SKeyProvider()
 			if err != nil {
-				log.Fatalf("failed to create k8s key provider. %v", err)
+				zap.S().Fatalf("failed to create k8s key provider. %v", err)
 			} else {
 				keyProviders = append(keyProviders, provider)
 			}
@@ -68,15 +65,15 @@ var rootCmd = &cobra.Command{
 		router := mux.NewRouter()
 		err = server.RegisterHandler(router, Issuer, keyProvider, httpKeyProvider)
 		if err != nil {
-			log.Fatalf("failed to register handler. %v", err)
+			zap.S().Fatalf("failed to register handler. %v", err)
 		}
 
 		http.Handle(issuerParsed.Path, router)
 
-		log.Infof("starting server on port %d\n", Port)
+		zap.S().Infof("starting server on port %d\n", Port)
 		err = http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
 		if err != nil {
-			log.Fatalf("failed to start server. %v", err)
+			zap.S().Fatalf("failed to start server. %v", err)
 		}
 	},
 }
@@ -89,6 +86,8 @@ func Execute() {
 }
 
 func init() {
+	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
+
 	rootCmd.Flags().StringVar(&Issuer, "issuer", "https://localhost:8080/", "Issuer URL (NOTE: / suffix required if no PATH)")
 	rootCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port")
 	rootCmd.Flags().StringSlice("issuers", []string{}, "Trusted issuers")
@@ -103,10 +102,10 @@ func init() {
 	viper.WatchConfig()
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Warnf("failed to read config file. %v", err)
+		zap.S().Warnf("failed to read config file. %v", err)
 	}
 
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Infof("config file changed: %s", e.Name)
+		zap.S().Infof("config file changed: %s", e.Name)
 	})
 }
