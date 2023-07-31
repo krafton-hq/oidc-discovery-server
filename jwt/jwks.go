@@ -57,7 +57,18 @@ func (keySet *CachedJsonWebKeySet) Keys() []op.Key {
 	}
 }
 
-func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.Client, maxTTLSeconds int, force bool) error {
+// Update updates keySet in place
+// ctx: context
+// httpClient: http client to use
+// defaultKeyTTL: default key TTL if no cache-control header defined in response
+// maxKeyTTL: max key TTL
+// force: force update even if keySet is not expired
+func (keySet *CachedJsonWebKeySet) Update(
+	ctx context.Context,
+	httpClient *http.Client,
+	defaultKeyTTL, maxKeyTTL time.Duration,
+	force bool,
+) error {
 	defer perf.Perf("Update")()
 
 	keySet.lock.Lock()
@@ -84,13 +95,13 @@ func (keySet *CachedJsonWebKeySet) Update(ctx context.Context, httpClient *http.
 		return errors.Wrapf(err, "failed to discover OIDC configuration. issuer: %s", keySet.issuer)
 	}
 
-	fetchedKeySet, ttlSeconds, err := fetchKeySet(conf.JwksURI, httpClient)
+	fetchedKeySet, keyTTL, err := fetchKeySet(conf.JwksURI, httpClient, defaultKeyTTL)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
 
 	keySet.updateInternalKeySet(fetchedKeySet, time.Now())
-	keySet.nextRefresh = time.Now().Add(time.Duration(math.Min(float64(ttlSeconds), float64(maxTTLSeconds))) * time.Second)
+	keySet.nextRefresh = time.Now().Add(time.Duration(math.Min(float64(keyTTL), float64(maxKeyTTL))) * time.Second)
 	log.Debugf("jwks updated. issuer: %s. next refresh: %s, keys: %s\n", keySet.Issuer(), keySet.nextRefresh, keySet.Keys())
 
 	return nil
@@ -126,7 +137,7 @@ func (keySet *CachedJsonWebKeySet) ShouldRefresh(time time.Time) bool {
 	return time.After(keySet.nextRefresh)
 }
 
-func fetchKeySet(jwksUri string, httpClient *http.Client) ([]JsonWebKey, int, error) {
+func fetchKeySet(jwksUri string, httpClient *http.Client, defaultKeyTTL time.Duration) ([]JsonWebKey, time.Duration, error) {
 	log.Infof("fetching JWKS from %s\n", jwksUri)
 
 	res, err := httpClient.Get(jwksUri)
@@ -135,7 +146,10 @@ func fetchKeySet(jwksUri string, httpClient *http.Client) ([]JsonWebKey, int, er
 	}
 
 	cache := res.Header.Get("Cache-Control")
-	ttlSeconds := getTTLSeconds(cache)
+	keyTTL := getKeyTTL(cache)
+	if keyTTL < 0 {
+		keyTTL = defaultKeyTTL
+	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -155,10 +169,10 @@ func fetchKeySet(jwksUri string, httpClient *http.Client) ([]JsonWebKey, int, er
 
 	keys := make([]JsonWebKey, 0)
 	for _, key := range parsedKeys {
-		keys = append(keys, NewJsonWebKey(key, time.Now().Add(time.Duration(ttlSeconds)*time.Second)))
+		keys = append(keys, NewJsonWebKey(key, time.Now().Add(keyTTL)))
 	}
 
-	return keys, ttlSeconds, nil
+	return keys, keyTTL, nil
 }
 
 func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
@@ -183,15 +197,15 @@ func ParseJWKS(body []byte) ([]jose.JSONWebKey, error) {
 	return keys, nil
 }
 
-func getTTLSeconds(cacheControlHeader string) int {
+func getKeyTTL(cacheControlHeader string) time.Duration {
 	parsed, err := cacheobject.ParseResponseCacheControl(cacheControlHeader)
 	if err != nil {
-		return 0
+		return -1
 	}
 
 	if parsed.NoCachePresent {
-		return 0
+		return -1
 	}
 
-	return int(math.Max(float64(parsed.MaxAge), 0))
+	return time.Duration(parsed.MaxAge)
 }
