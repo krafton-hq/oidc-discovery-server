@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/krafton-hq/oidc-discovery-server/util/perf"
 	"github.com/pkg/errors"
 	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.krafton.com/sbx/oidc-discovery-server/util/perf"
 	"go.uber.org/zap"
 	"gopkg.in/square/go-jose.v2"
 )

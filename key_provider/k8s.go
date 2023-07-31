@@ -2,9 +2,9 @@ package key_provider
 
 import (
 	"context"
+	"github.com/krafton-hq/oidc-discovery-server/jwt"
 	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.krafton.com/sbx/oidc-discovery-server/jwt"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"time"

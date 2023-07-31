@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/krafton-hq/oidc-discovery-server/jwt"
+	"github.com/krafton-hq/oidc-discovery-server/key_provider"
 	"github.com/pkg/errors"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.krafton.com/sbx/oidc-discovery-server/jwt"
-	"github.krafton.com/sbx/oidc-discovery-server/key_provider"
 	"net/http"
 	"net/url"
 )
