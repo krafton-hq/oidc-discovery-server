@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// TODO: module-level structured logging
-var log = zap.Must(zap.NewDevelopment()).Sugar()
-
 func Perf(label string) func() {
 	caller := "<unknown>"
 
@@ -18,9 +15,9 @@ func Perf(label string) func() {
 		caller = file + ":" + strconv.Itoa(line)
 	}
 
-	log.Debugf("[%s] starting label: %s", caller, label)
+	zap.S().Debugf("[%s] starting label: %s", caller, label)
 	start := time.Now()
 	return func() {
-		log.Debugf("[%s] %s took %s", caller, time.Since(start).String(), label)
+		zap.S().Debugf("[%s] %s took %s", caller, time.Since(start).String(), label)
 	}
 }
