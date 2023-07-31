@@ -143,3 +143,7 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 func (provider *HTTPKeyProvider) MaxTTLSeconds() int {
 	return provider.config.GetInt("maxTTLSeconds")
 }
+
+func (provider *HTTPKeyProvider) GetDefaultKeyTTLSeconds() int {
+	return provider.config.GetInt("defaultKeyTTLSeconds")
+}
