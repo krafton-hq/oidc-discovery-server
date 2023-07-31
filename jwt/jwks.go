@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -100,8 +99,12 @@ func (keySet *CachedJsonWebKeySet) Update(
 		return errors.Wrapf(err, "failed to get key set. issuer: %s", keySet.issuer)
 	}
 
+	if keyTTL > maxKeyTTL {
+		keyTTL = maxKeyTTL
+	}
+
 	keySet.updateInternalKeySet(fetchedKeySet, time.Now())
-	keySet.nextRefresh = time.Now().Add(time.Duration(math.Min(float64(keyTTL), float64(maxKeyTTL))) * time.Second)
+	keySet.nextRefresh = time.Now().Add(keyTTL)
 	log.Debugf("jwks updated. issuer: %s. next refresh: %s, keys: %s\n", keySet.Issuer(), keySet.nextRefresh, keySet.Keys())
 
 	return nil
