@@ -86,7 +86,15 @@ func Execute() {
 }
 
 func init() {
-	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
+	level, err := zap.ParseAtomicLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+
+	config := zap.NewProductionConfig()
+	config.Level = level
+
+	zap.ReplaceGlobals(zap.Must(config.Build()))
 
 	rootCmd.Flags().StringVar(&Issuer, "issuer", "https://localhost:8080/", "Issuer URL (NOTE: / suffix required if no PATH)")
 	rootCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port")
