@@ -114,6 +114,9 @@ func (provider *HTTPKeyProvider) KeySet(ctx context.Context) ([]op.Key, error) {
 }
 
 func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer string, force bool) (*jwt.CachedJsonWebKeySet, error) {
+	defaultKeyTTL := time.Duration(provider.GetDefaultKeyTTLSeconds()) * time.Second
+	maxKeyTTL := time.Duration(provider.MaxTTLSeconds()) * time.Second
+
 	// NOTE: 쓸데없이 객체 생성하긴 하는데 성능 필요한 코드 아니라서 괜찮을 듯
 	keySet := jwt.NewCachedJsonWebKeySet(issuer)
 	if !provider.cachedKeySets.SetIfAbsent(issuer, keySet) {
@@ -129,7 +132,7 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 	if keySet.ShouldRefresh(time.Now()) {
 		log.Infof("keyset expired. issuer: %v\n", keySet.Issuer())
 
-		err := keySet.Update(ctx, provider.client, provider.MaxTTLSeconds(), force)
+		err := keySet.Update(ctx, provider.client, defaultKeyTTL, maxKeyTTL, force)
 		if err != nil {
 			return nil, err
 		}
@@ -142,4 +145,8 @@ func (provider *HTTPKeyProvider) GetKeySetFromIssuer(ctx context.Context, issuer
 
 func (provider *HTTPKeyProvider) MaxTTLSeconds() int {
 	return provider.config.GetInt("maxTTLSeconds")
+}
+
+func (provider *HTTPKeyProvider) GetDefaultKeyTTLSeconds() int {
+	return provider.config.GetInt("defaultKeyTTLSeconds")
 }
