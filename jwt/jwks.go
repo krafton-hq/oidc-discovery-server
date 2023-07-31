@@ -210,5 +210,5 @@ func getKeyTTL(cacheControlHeader string) time.Duration {
 		return -1
 	}
 
-	return time.Duration(parsed.MaxAge)
+	return time.Duration(parsed.MaxAge) * time.Second
 }
